@@ -31,7 +31,8 @@ Absorbs and replaces `fornace-pi-models`.
 ## Install
 
 ```sh
-pi install npm:pi-mantice
+pi install npm:pi-mantice        # from the npm registry
+pi install git:github.com/Fornace/pi-mantice@v1.0.0   # straight from the repo
 ```
 
 Requires `MANTICE_API_KEY` (and optionally `MANTICE_BASE_URL`) in the
