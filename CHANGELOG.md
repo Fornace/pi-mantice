@@ -1,3 +1,8 @@
+## 1.0.1 (2026-09-03)
+
+- CI: declared `@types/node` as a dev dependency so `npm ci` typechecks on a
+  clean install; the v1.0.0 tag workflow failed at typecheck before reaching
+  publish. No runtime changes.
 # Changelog
 
 ## 1.0.0

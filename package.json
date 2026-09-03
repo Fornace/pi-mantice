@@ -1,6 +1,6 @@
 {
   "name": "pi-mantice",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Mantice gateway integration for Pi: live model catalog with capability fields, class-aware metadata, flash-class compaction, canonical overflow recovery, and first-install setup",
   "type": "module",
   "license": "MIT",
