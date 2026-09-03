@@ -5,7 +5,7 @@
 // thinking evidence, and a catalog_generated_at stamp. Exits non-zero on
 // any mismatch.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,9 +38,16 @@ const run = spawnSync(
     "-p", "Reply with the single word: ok"],
   { env: { ...process.env, PI_MANTICE_AUDIT_OUT: outPath }, encoding: "utf8", timeout: 120_000 },
 );
-if (run.status !== 0) {
-  console.error(`pi probe exited with status ${run.status}`);
+// The probe dumps the registry at session_start, before any model call lands.
+// A non-zero exit (for example upstream quota trouble during the -p ping) is
+// only fatal when the dump itself is missing.
+if (run.status !== 0 && !existsSync(outPath)) {
+  console.error(`pi probe exited with status ${run.status} and wrote no registry dump`);
   console.error(run.stderr || run.stdout);
+  process.exit(1);
+}
+if (!existsSync(outPath)) {
+  console.error("audit: probe wrote no registry dump");
   process.exit(1);
 }
 

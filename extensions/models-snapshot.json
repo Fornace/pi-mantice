@@ -3,342 +3,1263 @@
     "id": "codex-gpt-5.6-test",
     "context_window": 1050000,
     "max_output_tokens": 393216,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "coding-plan",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "alias:gpt-coding-plan"
+    "owned_by": "alias:gpt-coding-plan",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "embed",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-embed"
+    "owned_by": "alias:fornace-embed",
+    "mode": "embedding",
+    "class": "embed",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "eugeny-5.1",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "eugeny-5.1-vision",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "eugeny-max-pilot",
     "context_window": 1000000,
     "max_output_tokens": 128000,
-    "owned_by": "alias:glm-5.2-ondemand-reasoning"
+    "owned_by": "alias:glm-5.2-ondemand-reasoning",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "eugeny-v6",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fast",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "alias:fornace-fast"
+    "owned_by": "alias:fornace-fast",
+    "mode": "chat",
+    "class": "fast",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-embed",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "embedding",
+    "class": "embed",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-fast",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": "fast",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-flash",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": "flash",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-grok",
     "context_window": 256000,
     "max_output_tokens": 65536,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": false,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "medium",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-grok-fast",
     "context_window": 256000,
     "max_output_tokens": 65536,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": false,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "medium",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-image",
     "context_window": 128000,
     "max_output_tokens": 32768,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-image-edit",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image-edit",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-image-high",
     "context_window": 65536,
     "max_output_tokens": 32768,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-image-lite",
     "context_window": 128000,
     "max_output_tokens": 32768,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-image-max",
     "context_window": 65536,
     "max_output_tokens": 32768,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-llm",
     "context_window": 1000000,
     "max_output_tokens": 393216,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-llm-fast",
     "context_window": 1000000,
     "max_output_tokens": 131072,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-max",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": "max",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-reasoning",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": "reasoning",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "fornace-transcription",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "audio",
+    "class": "transcription",
+    "input_modalities": [
+      "audio"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-video",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "video",
+    "class": "video",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-video-dubbing",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "video",
+    "class": "video-dubbing",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-video-edit",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "video",
+    "class": "video-edit",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "fornace-vision",
     "context_window": 1000000,
     "max_output_tokens": 131072,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": "vision",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gemini-3-flash-preview",
     "context_window": 1000000,
     "max_output_tokens": 65536,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "gemini-3.5-flash",
     "context_window": 1000000,
     "max_output_tokens": 65536,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "glm-5.2-ondemand-fast",
     "context_window": 1000000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "glm-5.2-ondemand-max",
     "context_window": 1000000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "glm-5.2-ondemand-reasoning",
     "context_window": 1000000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-5.4-mini",
     "context_window": 400000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "gpt-5.5",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-5.6-luna-high",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-5.6-luna-medium",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-5.6-sol-high",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-5.6-terra-high",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "gpt-coding-plan",
     "context_window": 1050000,
     "max_output_tokens": 128000,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "grok",
     "context_window": 256000,
     "max_output_tokens": 65536,
-    "owned_by": "alias:fornace-grok"
+    "owned_by": "alias:fornace-grok",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": false,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "medium",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "image",
     "context_window": 128000,
     "max_output_tokens": 32768,
-    "owned_by": "alias:fornace-image"
+    "owned_by": "alias:fornace-image",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "image-edit",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-image-edit"
+    "owned_by": "alias:fornace-image-edit",
+    "mode": "image",
+    "class": "image-edit",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "image-high",
     "context_window": 65536,
     "max_output_tokens": 32768,
-    "owned_by": "alias:fornace-image-high"
+    "owned_by": "alias:fornace-image-high",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "image-lite",
     "context_window": 128000,
     "max_output_tokens": 32768,
-    "owned_by": "alias:fornace-image-lite"
+    "owned_by": "alias:fornace-image-lite",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "image-max",
     "context_window": 65536,
     "max_output_tokens": 32768,
-    "owned_by": "alias:fornace-image-max"
+    "owned_by": "alias:fornace-image-max",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "kimi",
     "context_window": 1048576,
     "max_output_tokens": 1048576,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "enabled"
+      ]
+    }
   },
   {
     "id": "llm",
     "context_window": 1000000,
     "max_output_tokens": 393216,
-    "owned_by": "alias:fornace-llm"
+    "owned_by": "alias:fornace-llm",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "llm-fast",
     "context_window": 1000000,
     "max_output_tokens": 131072,
-    "owned_by": "alias:fornace-llm-fast"
+    "owned_by": "alias:fornace-llm-fast",
+    "mode": "chat",
+    "class": null,
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "max",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "alias:fornace-max"
+    "owned_by": "alias:fornace-max",
+    "mode": "chat",
+    "class": "max",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "reasoning",
     "context_window": 1050000,
     "max_output_tokens": 1048576,
-    "owned_by": "alias:fornace-reasoning"
+    "owned_by": "alias:fornace-reasoning",
+    "mode": "chat",
+    "class": "reasoning",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "efforts": [
+        "high",
+        "low",
+        "max",
+        "medium",
+        "none",
+        "xhigh"
+      ],
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   },
   {
     "id": "reve-image",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "image",
+    "class": "image",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "image"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "text-embedding-v3",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "routing"
+    "owned_by": "routing",
+    "mode": "embedding",
+    "class": "embedding",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "transcription",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-transcription"
+    "owned_by": "alias:fornace-transcription",
+    "mode": "audio",
+    "class": "transcription",
+    "input_modalities": [
+      "audio"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "video",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-video"
+    "owned_by": "alias:fornace-video",
+    "mode": "video",
+    "class": "video",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "video-dubbing",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-video-dubbing"
+    "owned_by": "alias:fornace-video-dubbing",
+    "mode": "video",
+    "class": "video-dubbing",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "video-edit",
     "context_window": null,
     "max_output_tokens": 4096,
-    "owned_by": "alias:fornace-video-edit"
+    "owned_by": "alias:fornace-video-edit",
+    "mode": "video",
+    "class": "video-edit",
+    "input_modalities": [
+      "text"
+    ],
+    "output_modalities": [
+      "video"
+    ],
+    "supports_tools": true,
+    "thinking": null
   },
   {
     "id": "vision",
     "context_window": 1000000,
     "max_output_tokens": 131072,
-    "owned_by": "alias:fornace-vision"
+    "owned_by": "alias:fornace-vision",
+    "mode": "chat",
+    "class": "vision",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "output_modalities": [
+      "text"
+    ],
+    "supports_tools": true,
+    "thinking": {
+      "modes": [
+        "disabled",
+        "enabled"
+      ]
+    }
   }
 ]
