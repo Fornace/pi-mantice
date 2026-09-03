@@ -30,13 +30,19 @@ const rows = await fetchCatalog(baseUrlFromEnv(), key);
 assertFornaceMaxCapacity(rows);
 const expected = Object.fromEntries(PROVIDERS.map((p) => [p, buildProviderModels(rows, p, () => {})]));
 
-const outPath = join(mkdtempSync(join(tmpdir(), "pi-mantice-audit-")), "registry.json");
+const scratch = mkdtempSync(join(tmpdir(), "pi-mantice-audit-"));
+const outPath = join(scratch, "registry.json");
+// --no-extensions + isolated PI_CODING_AGENT_DIR: the audit must see exactly
+// the registry this package produces, not whatever legacy packages or global
+// extensions the developer machine loads (-e paths still work).
 const run = spawnSync(
   "pi",
-  ["-e", join(here, "audit-probe.ts"), "--no-session", "--no-context-files", "--no-skills",
+  ["-e", join(here, "..", "extensions", "mantice-models.ts"), "-e", join(here, "audit-probe.ts"),
+    "--no-extensions", "--no-session", "--no-context-files", "--no-skills",
     "--no-themes", "--mode", "json", "--provider", "mantice", "--model", "fornace-fast",
     "-p", "Reply with the single word: ok"],
-  { env: { ...process.env, PI_MANTICE_AUDIT_OUT: outPath }, encoding: "utf8", timeout: 120_000 },
+  { env: { ...process.env, PI_MANTICE_AUDIT_OUT: outPath,
+    PI_CODING_AGENT_DIR: join(scratch, "agent") }, encoding: "utf8", timeout: 120_000 },
 );
 // The probe dumps the registry at session_start, before any model call lands.
 // A non-zero exit (for example upstream quota trouble during the -p ping) is
