@@ -54,10 +54,17 @@ test('capability rows build exact Pi metadata from structured fields', () => {
   assert.equal(models.find((m) => m.id === 'fornace-flash').reasoning, true);
 });
 
-test('capability tier fails closed on missing mode-tier fields', () => {
+test('capability tier skips incomplete rows loudly, aborts only on max rows', () => {
   const broken = parseCatalog({ data: [...capabilityRows.map((r) => ({ ...r })),
     { id: 'fornace-new', owned_by: 'routing', mode: 'chat' }] });
-  assert.throws(() => buildProviderModels(broken, 'mantice'), /fornace-new.*missing context_window/);
+  const warnings = [];
+  const models = buildProviderModels(broken, 'mantice', (m) => warnings.push(m));
+  assert.equal(models.find((m) => m.id === 'fornace-new'), undefined);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /skipping fornace-new: gateway row missing context_window, max_output_tokens/);
+  const brokenMax = parseCatalog({ data: capabilityRows.map((r) =>
+    r.id === 'fornace-max' ? { ...r, context_window: null } : r) });
+  assert.throws(() => buildProviderModels(brokenMax, 'mantice'), /fornace-max.*missing context_window/);
 });
 
 test('fornace-max capacity assertion holds in both tiers', () => {

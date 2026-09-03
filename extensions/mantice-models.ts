@@ -38,7 +38,7 @@ const COMPAT = {
 
 const SNAPSHOT_PATH = join(dirname(fileURLToPath(import.meta.url)), "models-snapshot.json");
 let catalogPromise: Promise<CatalogRow[]> | undefined;
-let legacyWarned = false;
+const loggedWarnings = new Set<string>();
 
 async function loadSnapshot(): Promise<CatalogRow[]> {
   const raw = await readFile(SNAPSHOT_PATH, "utf8");
@@ -76,8 +76,8 @@ async function resolveCatalog(): Promise<CatalogRow[]> {
 
 function providerModels(rows: CatalogRow[], provider: ProviderId) {
   const warn = (message: string) => {
-    if (legacyWarned) return;
-    legacyWarned = true;
+    if (loggedWarnings.has(message)) return;
+    loggedWarnings.add(message);
     console.error(message);
   };
   return buildProviderModels(rows, provider, warn).map((model) => ({ ...model, compat: COMPAT }));

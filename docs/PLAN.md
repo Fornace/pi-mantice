@@ -75,10 +75,11 @@ Rules:
   `video`, `audio`, `embed`...); it is operator-set, not inferred.
 - Non-chat rows keep sane nulls and are explicitly non-conversational; clients
   stop guessing by id literal.
-- `class` is optional operator metadata on the model group (new field,
-  default derived: `fornace-max→max`, `fornace-reasoning→reasoning`,
-  `fornace-fast→fast`, `fornace-flash→flash`, plus modality names). No new
-  routing behavior reads it; it exists for clients.
+- `class` is derived at response time from the operator-owned group table
+  (exact entries beat `*` prefixes); nothing new is stored on model groups,
+  so `routing_revision` never rotates for catalog reporting and deploy
+  parity is untouched. (Implemented as `GROUP_CLASS_TABLE` in
+  `src/routing/model_capabilities.rs`.)
 - `thinking` aggregates what enabled deployments in the group accept (from
   cards/params), so Pi can expose only real levels.
 - Version stamp: response gains `catalog_generated_at`; audits compare it.
@@ -87,10 +88,9 @@ Acceptance: live rows for all 57 models carry mode + modalities;
 `fornace-pi-models` style audit extended to fail on missing fields; Rust tests
 cover groups with mixed cards and quarantined circuits (effective window
 omitted when all open, unchanged behavior). Two gateway-specific traps:
-- A `class` field on model groups rotates `routing_revision` on republish;
-  the deploy parity helper (`canonical()` in the blue-green scripts, see
-  HANDOFF.md) must include/ignore it deliberately, and the M0 PR updates it
-  in the same commit plus the Routing UI round-trip test.
+- Rows missing capability evidence are never silently defaulted: the client
+  skips such rows with a loud per-row warning and aborts registration only
+  when `fornace-max` itself is malformed (the 128K incident class).
 - `thinking` is the union over enabled deployments: honest for the group,
   one route may reject a level another accepts; that is reactive failover's
   job per e17c9f4, and the client map only ever offers levels some route in

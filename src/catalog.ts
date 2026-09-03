@@ -202,15 +202,28 @@ export function buildProviderModels(
   for (const row of rows) {
     if (!isChatRow(row, capability)) continue;
     if (!PROVIDER_ALIASES[provider] && isAliasRow(row)) continue;
+    if (capability) {
+      const missing = ["mode", "context_window", "max_output_tokens"]
+        .filter((field) => row[field as keyof CatalogRow] == null);
+      if (missing.length) {
+        // A capability gateway that cannot describe one route must not poison
+        // the whole catalog; but a silently defaulted window is the 128K
+        // incident itself, so the row is skipped loudly, never guessed.
+        if (row.id === "fornace-max" || row.id === "max") {
+          throw new Error(`capability-tier catalog row "${row.id}" is missing ${missing.join(", ")}`);
+        }
+        warn(`[pi-mantice] skipping ${row.id}: gateway row missing ${missing.join(", ")}`);
+        continue;
+      }
+    }
     const contextWindow =
       typeof row.context_window === "number" && row.context_window > 0
         ? row.context_window
-        : (capability ? failClosed(row, "context_window") : DEFAULT_CONTEXT_WINDOW);
+        : DEFAULT_CONTEXT_WINDOW;
     const maxTokens =
       typeof row.max_output_tokens === "number" && row.max_output_tokens > 0
         ? row.max_output_tokens
-        : (capability ? failClosed(row, "max_output_tokens") : DEFAULT_MAX_TOKENS);
-    if (capability && !row.mode) failClosed(row, "mode");
+        : DEFAULT_MAX_TOKENS;
     models.push({
       id: row.id,
       name: prettyName(row.id),
@@ -223,10 +236,6 @@ export function buildProviderModels(
   }
   models.sort((left, right) => left.id.localeCompare(right.id));
   return models;
-}
-
-function failClosed(row: CatalogRow, field: string): never {
-  throw new Error(`capability-tier catalog row "${row.id}" is missing ${field}`);
 }
 
 // Compaction candidates: the configured classes resolved to registered model
