@@ -1,0 +1,344 @@
+[
+  {
+    "id": "codex-gpt-5.6-test",
+    "context_window": 1050000,
+    "max_output_tokens": 393216,
+    "owned_by": "routing"
+  },
+  {
+    "id": "coding-plan",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "alias:gpt-coding-plan"
+  },
+  {
+    "id": "embed",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-embed"
+  },
+  {
+    "id": "eugeny-5.1",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "eugeny-5.1-vision",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "eugeny-max-pilot",
+    "context_window": 1000000,
+    "max_output_tokens": 128000,
+    "owned_by": "alias:glm-5.2-ondemand-reasoning"
+  },
+  {
+    "id": "eugeny-v6",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fast",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "alias:fornace-fast"
+  },
+  {
+    "id": "fornace-embed",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-fast",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-flash",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-grok",
+    "context_window": 256000,
+    "max_output_tokens": 65536,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-grok-fast",
+    "context_window": 256000,
+    "max_output_tokens": 65536,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-image",
+    "context_window": 128000,
+    "max_output_tokens": 32768,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-image-edit",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-image-high",
+    "context_window": 65536,
+    "max_output_tokens": 32768,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-image-lite",
+    "context_window": 128000,
+    "max_output_tokens": 32768,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-image-max",
+    "context_window": 65536,
+    "max_output_tokens": 32768,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-llm",
+    "context_window": 1000000,
+    "max_output_tokens": 393216,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-llm-fast",
+    "context_window": 1000000,
+    "max_output_tokens": 131072,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-max",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-reasoning",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-transcription",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-video",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-video-dubbing",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-video-edit",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "fornace-vision",
+    "context_window": 1000000,
+    "max_output_tokens": 131072,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gemini-3-flash-preview",
+    "context_window": 1000000,
+    "max_output_tokens": 65536,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gemini-3.5-flash",
+    "context_window": 1000000,
+    "max_output_tokens": 65536,
+    "owned_by": "routing"
+  },
+  {
+    "id": "glm-5.2-ondemand-fast",
+    "context_window": 1000000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "glm-5.2-ondemand-max",
+    "context_window": 1000000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "glm-5.2-ondemand-reasoning",
+    "context_window": 1000000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.4-mini",
+    "context_window": 400000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.5",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.6-luna-high",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.6-luna-medium",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.6-sol-high",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-5.6-terra-high",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "gpt-coding-plan",
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "owned_by": "routing"
+  },
+  {
+    "id": "grok",
+    "context_window": 256000,
+    "max_output_tokens": 65536,
+    "owned_by": "alias:fornace-grok"
+  },
+  {
+    "id": "image",
+    "context_window": 128000,
+    "max_output_tokens": 32768,
+    "owned_by": "alias:fornace-image"
+  },
+  {
+    "id": "image-edit",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-image-edit"
+  },
+  {
+    "id": "image-high",
+    "context_window": 65536,
+    "max_output_tokens": 32768,
+    "owned_by": "alias:fornace-image-high"
+  },
+  {
+    "id": "image-lite",
+    "context_window": 128000,
+    "max_output_tokens": 32768,
+    "owned_by": "alias:fornace-image-lite"
+  },
+  {
+    "id": "image-max",
+    "context_window": 65536,
+    "max_output_tokens": 32768,
+    "owned_by": "alias:fornace-image-max"
+  },
+  {
+    "id": "kimi",
+    "context_window": 1048576,
+    "max_output_tokens": 1048576,
+    "owned_by": "routing"
+  },
+  {
+    "id": "llm",
+    "context_window": 1000000,
+    "max_output_tokens": 393216,
+    "owned_by": "alias:fornace-llm"
+  },
+  {
+    "id": "llm-fast",
+    "context_window": 1000000,
+    "max_output_tokens": 131072,
+    "owned_by": "alias:fornace-llm-fast"
+  },
+  {
+    "id": "max",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "alias:fornace-max"
+  },
+  {
+    "id": "reasoning",
+    "context_window": 1050000,
+    "max_output_tokens": 1048576,
+    "owned_by": "alias:fornace-reasoning"
+  },
+  {
+    "id": "reve-image",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "text-embedding-v3",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "routing"
+  },
+  {
+    "id": "transcription",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-transcription"
+  },
+  {
+    "id": "video",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-video"
+  },
+  {
+    "id": "video-dubbing",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-video-dubbing"
+  },
+  {
+    "id": "video-edit",
+    "context_window": null,
+    "max_output_tokens": 4096,
+    "owned_by": "alias:fornace-video-edit"
+  },
+  {
+    "id": "vision",
+    "context_window": 1000000,
+    "max_output_tokens": 131072,
+    "owned_by": "alias:fornace-vision"
+  }
+]

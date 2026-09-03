@@ -1,0 +1,54 @@
+{
+  "name": "pi-mantice",
+  "version": "1.0.0",
+  "description": "Mantice gateway integration for Pi: live model catalog with capability fields, class-aware metadata, flash-class compaction, canonical overflow recovery, and first-install setup",
+  "type": "module",
+  "license": "MIT",
+  "author": "Francesco Frapporti <effedue@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fornace/pi-mantice.git"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "mantice",
+    "fornace",
+    "models",
+    "compaction"
+  ],
+  "files": [
+    "extensions",
+    "src",
+    "tools",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "snapshot": "node tools/refresh-snapshot.mjs",
+    "audit": "node tools/audit.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "pi-frontier": "^1.2.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
