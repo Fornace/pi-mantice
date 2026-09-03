@@ -118,6 +118,15 @@ export default async function register(api: ExtensionAPI) {
     return undefined;
   });
 
+  api.registerCommand("mantice-setup", {
+    description: "Preview Mantice class-routing onboarding for your own gateway",
+    handler: async (args, ctx) => {
+      const config = args?.trim() || "setup.json";
+      ctx.ui.notify(`Setup runs as a CLI so secrets and the APPLY gate stay in your shell: node ${"tools/setup.mjs"} --config ${config}`, "info");
+      ctx.ui.notify("It refuses Fornace production gateways without --allow-prod + PROCEED.", "info");
+    },
+  });
+
   api.on("session_before_compact", async (event, ctx) => {
     if (!rows.length) return undefined;
     const modelIds = compactionModelIds(rows.filter((row) => classOf(row) !== null), COMPACTION_CHAIN);
