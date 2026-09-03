@@ -1,6 +1,6 @@
 # pi-mantice architecture plan
 
-Status: DRAFT FOR APPROVAL. Nothing in this document is built until Francesco says go.
+Status: APPROVED AND SHIPPED (2026-09-03). M0 merged through PR #11 and deployed (build with 60c5af0/f8e0b9a). pi-mantice v1.0.0 built, tested, published to GitHub, installed on this machine; npm registry publish in flight.
 Author: pi session 01a06499. Date: 2026-09-03. Sources reviewed same day:
 `fornace-pi-models@a2a63f7`, `pi-frontier@9ae9fa1` (data, daily.yml),
 Mantice `origin/main` (`src/routing/select.rs`, `src/routing/models.rs`,
