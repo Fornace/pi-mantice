@@ -86,7 +86,15 @@ Rules:
 Acceptance: live rows for all 57 models carry mode + modalities;
 `fornace-pi-models` style audit extended to fail on missing fields; Rust tests
 cover groups with mixed cards and quarantined circuits (effective window
-omitted when all open, unchanged behavior).
+omitted when all open, unchanged behavior). Two gateway-specific traps:
+- A `class` field on model groups rotates `routing_revision` on republish;
+  the deploy parity helper (`canonical()` in the blue-green scripts, see
+  HANDOFF.md) must include/ignore it deliberately, and the M0 PR updates it
+  in the same commit plus the Routing UI round-trip test.
+- `thinking` is the union over enabled deployments: honest for the group,
+  one route may reject a level another accepts; that is reactive failover's
+  job per e17c9f4, and the client map only ever offers levels some route in
+  the group advertises.
 
 ## M1. pi-mantice v1: catalog, classes, metadata
 
@@ -106,10 +114,13 @@ tools/audit-probe.ts           dumps resolved Pi registry at session_start
 
 Catalog behavior (inherited from fornace-pi-models, hardened):
 - Live fetch at extension-factory time (Pi awaits it); snapshot fallback logs
-  loudly; snapshot is committed in-repo and CI-refreshed, never invented.
-- Fail closed: `fornace-max`/`max`/class rows with missing or ≤128K
-  `context_window`, or missing `mode` after M0, abort registration with an
-  actionable error naming the row (never a silent default).
+  loudly; snapshot is committed in-repo and refreshed by the release workflow
+  (gateway key as repo secret) so it always ships version-matched.
+- Two audit tiers. When M0 fields are present (`mode` on rows), absence of
+  mode/modalities/context on any chat row is fail-closed, naming the row.
+  Against a pre-M0 third-party gateway the client falls back to the
+  NON_CHAT-id literal path with one loud warning per session: old gateways
+  must keep working, new truth is strict.
 
 Class metadata:
 - `reasoning: true` and `thinkingLevelMap` built from gateway `thinking.efforts`
@@ -155,7 +166,9 @@ wrapper). For a gateway the user runs themselves (ADMIN_TOKEN + URL configured):
    (`MANTICE_SETUP_PROVIDERS=json` file: kind, base_url, credential env names).
    No secret ever leaves the machine; tool posts the same shape the Providers
    console posts.
-2. Probe each provider (`POST /admin/providers/probe`), discover models.
+2. Probe each provider (`POST /admin/providers/probe`), discover models. Tests
+   run against a local HTTP fixture standing in for a provider (`/models`,
+   `/chat/completions`), never example.invalid hosts.
 3. Classify discovered models into `max/reasoning/fast/flash` + modalities via
    pi-frontier join (tier, cost, context, release date); anything absent from
    frontier is offered but demoted to its own internal group, never into a
@@ -175,7 +188,8 @@ wrapper). For a gateway the user runs themselves (ADMIN_TOKEN + URL configured):
 2. `npm test`, `npm run audit` against live llm.fornace.net, real auto-discovery
    probe (`pi -e` AND installed-directory shape per pi-package skill).
 3. Publish: one manual first `npm publish` (new package, OIDC impossible on
-   first), then `npm trust github`, tag `v*` pipeline after.
+   first), then `npm trust github`, tag `v*` pipeline after; the repo carries
+   `publish.yml` (Node 24, `id-token: write`, no stored token) from day one.
 4. Switch this machine: settings `packages` entry from the local path to
    `npm:pi-mantice@<exact version>`; reload every running Pi per the cmux
    protocol (escape if active, reload, verify footer `1.1M`); a fresh-process
