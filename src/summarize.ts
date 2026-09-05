@@ -58,6 +58,7 @@ export async function compactWithClassChain(
   { compaction: CompactionResult } | { cancel: true } | undefined
 > {
   const { preparation, reason, signal } = event;
+  if (signal.aborted) return { cancel: true };
   const messages = [...preparation.messagesToSummarize, ...preparation.turnPrefixMessages];
   if (!messages.length || !deps.modelIds.length) return undefined;
   const conversationText = serialize(messages as never[]);
@@ -70,7 +71,7 @@ export async function compactWithClassChain(
   const identity = gatewaySessionIdentity(deps.conversationId ?? "");
 
   for (const id of deps.modelIds) {
-    if (signal.aborted) return undefined;
+    if (signal.aborted) return { cancel: true };
     const model = deps.resolveModel(id);
     if (!model) continue;
     try {
@@ -81,6 +82,7 @@ export async function compactWithClassChain(
         sessionId: deps.newSessionId(),
         ...(identity ? { headers: { [SESSION_HEADER]: identity } } : {}),
       });
+      if (signal.aborted) return { cancel: true };
       const summary = response.text?.trim();
       if (!summary) throw new Error(`class route ${id} returned an empty summary`);
       return {
@@ -92,7 +94,9 @@ export async function compactWithClassChain(
         },
       };
     } catch (error) {
-      if (signal.aborted) return undefined;
+      if (signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+        return { cancel: true };
+      }
       deps.notify(
         `pi-mantice: class-route compaction failed on ${id}: ${error instanceof Error ? error.message : error}`,
         "warning",

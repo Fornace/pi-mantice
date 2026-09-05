@@ -144,7 +144,9 @@ export default async function register(api: ExtensionAPI) {
           options as never,
         );
         if (response.stopReason === "error" || response.stopReason === "aborted") {
-          throw new Error(response.errorMessage || `Compaction ${response.stopReason}`);
+          const error = new Error(response.errorMessage || `Compaction ${response.stopReason}`);
+          if (response.stopReason === "aborted") error.name = "AbortError";
+          throw error;
         }
         const text = (response.content ?? [])
           .flatMap((block) => (block.type === "text" ? [block.text] : []))

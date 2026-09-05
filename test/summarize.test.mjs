@@ -35,6 +35,32 @@ function deps(behavior) {
 
 const serialize = (messages) => JSON.stringify(messages);
 
+test('cancellation never falls through to another compactor', async () => {
+  for (const reason of ['manual', 'threshold', 'overflow']) {
+    for (const timing of ['before', 'reject', 'resolve', 'provider-aborted']) {
+      const controller = new AbortController();
+      let calls = 0;
+      const { value, notifications } = deps(() => {
+        calls++;
+        if (timing === 'provider-aborted') {
+          const error = new Error('provider cancelled');
+          error.name = 'AbortError';
+          throw error;
+        }
+        controller.abort();
+        if (timing === 'reject') throw new Error('cancelled during request');
+        return { text: 'late summary must not replace context' };
+      });
+      if (timing === 'before') controller.abort();
+      const result = await compactWithClassChain(
+        { ...event(reason), signal: controller.signal }, value, serialize);
+      assert.deepEqual(result, { cancel: true }, `${reason}/${timing}`);
+      assert.equal(calls, timing === 'before' ? 0 : 1);
+      assert.deepEqual(notifications, []);
+    }
+  }
+});
+
 test('compaction preserves stable conversation identity independently of disabled cache', async () => {
   const { value } = deps(() => {});
   const calls = [];
