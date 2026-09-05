@@ -28,6 +28,7 @@ import {
 import { COMPACTION_CHAIN, classOf } from "../src/classes.ts";
 import { compactWithClassChain } from "../src/summarize.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
+import { registerSessionIdentity } from "../src/session-identity.ts";
 
 const COMPAT = {
   supportsDeveloperRole: false,
@@ -84,6 +85,7 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 }
 
 export default async function register(api: ExtensionAPI) {
+  registerSessionIdentity(api);
   let rows: CatalogRow[];
   try {
     rows = await resolveCatalog();

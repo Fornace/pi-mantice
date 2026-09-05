@@ -27,6 +27,11 @@ Absorbs and replaces `fornace-pi-models`.
   rewritten.
 - Failover transparency: one notice per backend model change on a route
   (`fornace-max served by glm-5.3`), context math untouched.
+- Session isolation: agent requests to Mantice providers send one opaque
+  `X-Mantice-Session-ID`, stable across resume and different for new sessions.
+  This enables gateway-side session-local recovery without modifying payloads
+  or cache-affinity headers. Requires Pi's `before_provider_headers` hook
+  (verified with Pi 0.84.4). Other providers are untouched.
 
 ## Install
 
@@ -54,6 +59,7 @@ Fornace production hosts are blocked by default.
 ```sh
 npm test          # unit tests, no Pi or network needed
 npm run typecheck
+npm run test:session-wire # real Pi CLI against an isolated loopback fixture
 npm run snapshot  # refresh extensions/models-snapshot.json from the live catalog
 npm run audit     # spawn a real Pi and compare its registry to the live catalog
 ```
