@@ -60,6 +60,7 @@ Fornace production hosts are blocked by default.
 npm test          # unit tests, no Pi or network needed
 npm run typecheck
 npm run test:session-wire # real Pi CLI against an isolated loopback fixture
+MANTICE_BIN=/absolute/path/to/mantice npm run test:session-recovery # full local chain
 npm run snapshot  # refresh extensions/models-snapshot.json from the live catalog
 npm run audit     # spawn a real Pi and compare its registry to the live catalog
 ```

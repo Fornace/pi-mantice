@@ -44,3 +44,19 @@ test (the current wire test proves headers, gateway fixtures prove routing
 separately). Compaction subrequests are not covered by this agent header hook.
 Latest observed Publish runs33768229739 cancelled/33759548513 failed; do not
 assume npm trusted publishing is configured or claim package release succeeded.
+
+Follow-up verification17:20UTC:
+- f7a8c7b CI33980223281 succeeded (unit/typecheck/real Pi wire verifier).
+- New verify-session-recovery.py uses real Pi RPC, real Mantice release binary,
+  disposable SQLite/auth and local mock providers. Four turns pass: initial
+  modality failure then fallback, resumed-session fallback first, different
+  session original order, different credential original order. The complete
+  triggering text and PNG bytes match across attempts; exactly three scoped
+  preferences persist. No real provider traffic or installed plugin changes.
+- Negative control with installedv1.0.0 fails on the second turn: it retries
+  reject-image then accept-image instead of reusing the learned destination.
+- Raw positive result: session-recovery-chain: PASS; real Pi + Mantice, full
+  text/image failover, resumed preference, other-session and credential isolation.
+- Fresh SQLite transaction and Pi RPC docs HTTP20017:17UTC, installed source
+  and CLI contract inspected. The combined gate belongs in Mantice CI because
+  Mantice is private; pi-mantice CI must not assume cross-repository credentials.

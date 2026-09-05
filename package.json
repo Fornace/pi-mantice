@@ -34,6 +34,7 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "test:session-wire": "node tools/verify-session-wire.mjs",
+    "test:session-recovery": "python3 tools/verify-session-recovery.py",
     "snapshot": "node tools/refresh-snapshot.mjs",
     "audit": "node tools/audit.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
