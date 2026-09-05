@@ -13,6 +13,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+import compaction_cancel_fixture
 
 REPO = Path(__file__).resolve().parents[1]
 TOKEN = "pi-recovery-fixture-token"
@@ -25,6 +26,7 @@ class Upstream(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["content-length"])))
         CALLS.append(body)
+        compaction_cancel_fixture.hold_summary(body)
         if body["model"] == "reject-image":
             data = json.dumps({"error": {"code": "modality_not_supported",
                                        "message": "This model does not support image input."}}).encode()
@@ -88,8 +90,8 @@ def stop(process):
             process.wait(timeout=5)
 
 
-def pi_turn(root, port, session_id, token=TOKEN, compact=False):
-    if compact:
+def pi_turn(root, port, session_id, token=TOKEN, compact=False, cancel=False):
+    if compact or cancel:
         config = root / "config"
         config.mkdir(exist_ok=True)
         (config / "settings.json").write_text(json.dumps({"compaction": {"keepRecentTokens": 1}}))
@@ -130,6 +132,8 @@ def pi_turn(root, port, session_id, token=TOKEN, compact=False):
                     break
             assert final and final.get("stopReason") == "stop", final
             assert any(part.get("text") == "fixture OK" for part in final["content"]), final
+            if cancel:
+                compaction_cancel_fixture.verify(process, events, prompt)
             if compact:
                 for command in [{"type": "compact", "id": "fixture-compact"}, prompt] * 2:
                     process.stdin.write(json.dumps(command) + "\n")
@@ -218,6 +222,8 @@ def run(root):
             assert "Summarize this coding-agent conversation" in json.dumps(lifecycle[1]), lifecycle[1]
             assert MESSAGE in json.dumps(lifecycle[-1]), lifecycle[-1]
             print("session-compaction-lifecycle: PASS; real Pi RPC prompt/compact/prompt retains session preference")
+            if os.environ.get("PI_TEST_COMPACTION_CANCEL") == "1":
+                pi_turn(root, port, a, cancel=True)
             print("session-recovery-chain: PASS; real Pi + Mantice, full text/image failover, resumed preference, other-session and credential isolation")
         finally:
             stop(gateway)
