@@ -49,3 +49,32 @@ Fixture first used an invalid command name; corrected to documented get_entries
 before the meaningful failure. The reproducer asserts no saved compaction and
 same-session continuation only if cancellation succeeds; those assertions remain
 unreached on the failing installed version, not silently accepted.
+
+## Verified upstream resolution in Pi0.85.1
+
+Current upstream agent-session.ts GET20018:27:32UTC already includes
+abortCompaction() and abortBranchSummary() in abort():
+https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/core/agent-session.ts
+Raw extraction: /tmp/mantice-pi-session-current-20260905.md. npm registry
+`npm view @earendil-works/pi-coding-agent version dist-tags --json` returned
+version0.85.1/latest0.85.1. Isolated exact0.85.1 install source confirms the fix.
+
+The same previously failing RPC reproducer PASSes on0.85.1: abort settles,
+no compaction entry is saved, and the next prompt completes in the same session.
+Dev dependency is now pinned exactly0.85.1 with regenerated lockfile. Recovery
+fixture defaults to that repo-local Pi binary and always tests cancellation;
+the former opt-in environment variable is no longer required. PI_TEST_BIN can
+still explicitly select an older binary as a negative control.
+
+All32 unit tests, typecheck, ordinary session-wire, compaction-wire and full real
+Pi->Mantice recovery/cancellation fixture PASS locally. This supersedes the
+unresolved source-test gap above, not the installed-client rollout limitation:
+shared/global Pi remains0.84.4 and installed plugin remains5c8011d at this point.
+No manual SDK patch or production registry changes. Gateway CI pin update and
+safe-boundary fleet upgrade remain required.
+
+npm installed-version help and official install docs reviewed GET20018:27:57UTC:
+https://docs.npmjs.com/cli/v12/commands/npm-install/
+Raw extraction /tmp/mantice-npm-install-20260905.md; installs used exact version,
+ignore-scripts, no-audit/no-fund. The lockfile change includes the SDK dependency
+tree update; it is not a handwritten source rewrite.

@@ -95,7 +95,7 @@ def pi_turn(root, port, session_id, token=TOKEN, compact=False, cancel=False):
         config = root / "config"
         config.mkdir(exist_ok=True)
         (config / "settings.json").write_text(json.dumps({"compaction": {"keepRecentTokens": 1}}))
-    command = [os.environ.get("PI_TEST_BIN", "pi"), "--offline", "--no-extensions", "--extension",
+    command = [os.environ.get("PI_TEST_BIN", str(REPO / "node_modules/.bin/pi")), "--offline", "--no-extensions", "--extension",
                os.environ.get("PI_TEST_EXTENSION", str(REPO / "extensions/mantice-models.ts")), "--no-skills", "--no-themes",
                "--no-prompt-templates", "--no-context-files", "--no-tools", "--provider", "mantice",
                "--model", "fornace-fast", "--thinking", "off", "--session-dir", str(root / "sessions"),
@@ -222,8 +222,7 @@ def run(root):
             assert "Summarize this coding-agent conversation" in json.dumps(lifecycle[1]), lifecycle[1]
             assert MESSAGE in json.dumps(lifecycle[-1]), lifecycle[-1]
             print("session-compaction-lifecycle: PASS; real Pi RPC prompt/compact/prompt retains session preference")
-            if os.environ.get("PI_TEST_COMPACTION_CANCEL") == "1":
-                pi_turn(root, port, a, cancel=True)
+            pi_turn(root, port, a, cancel=True)
             print("session-recovery-chain: PASS; real Pi + Mantice, full text/image failover, resumed preference, other-session and credential isolation")
         finally:
             stop(gateway)
