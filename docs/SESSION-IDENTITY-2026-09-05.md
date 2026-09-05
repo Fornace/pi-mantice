@@ -83,3 +83,22 @@ keep prompt/auth, omit prompt_cache_key with cacheRetention:none. Raw result:
 This verifies direct transport, not an interactive /compact lifecycle. CI and
 publish gates include it. Installed75bdb3b does not yet contain this follow-up;
 rollout remains separate pending CI. No live upstream or production mutations.
+
+## Full RPC compaction lifecycle
+
+56d472a CI33982112976 SUCCESS. Extended combined fixture now runs a real Pi
+prompt/compact/prompt/compact/prompt against real Mantice and synthetic providers.
+First flash-alias compaction learns its own route-scoped fallback; second
+compaction retains that preference. Ordinary turns keep their distinct original
+route scope. Compaction input is identical across its fallback attempts.
+Debug gateway test passes; old installed75bdb3b is a failing negative control:
+its second compaction retries reject-image then accept-image instead of accept
+alone. Fixture explicitly seeds the snapshot-advertised flash alias: without it,
+offline snapshot compaction correctly got404 and fell through to default Pi.
+
+Also preserve SDK error/aborted diagnostics instead of misreporting every such
+response as empty summary. This exposed the fixture404 accurately. No change to
+class selection, input, fallback policy or provider configuration is intended.
+Installed Pi RPC docs compact response and installed session_before_compact
+dispatch source inspected. Raw positive result:
+`session-compaction-lifecycle: PASS; real Pi RPC prompt/compact/prompt retains session preference`

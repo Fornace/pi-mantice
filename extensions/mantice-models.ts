@@ -143,6 +143,9 @@ export default async function register(api: ExtensionAPI) {
           context as never,
           options as never,
         );
+        if (response.stopReason === "error" || response.stopReason === "aborted") {
+          throw new Error(response.errorMessage || `Compaction ${response.stopReason}`);
+        }
         const text = (response.content ?? [])
           .flatMap((block) => (block.type === "text" ? [block.text] : []))
           .join("\n");

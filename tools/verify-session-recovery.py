@@ -63,6 +63,7 @@ def seed(path, port):
                     "base_url": f"http://127.0.0.1:{port}/v1", "auth_kind": "none",
                     "credential": {}, "timeout_ms": 3000, "enabled": True, "adapters": {}}
         db.execute("INSERT INTO routing_provider_accounts VALUES(?,?)", ("fixture", json.dumps(provider)))
+        db.execute("INSERT INTO routing_aliases VALUES('fornace-flash','fornace-fast')")
         card = {"limits": {"max_input_tokens": 1100000, "max_output_tokens": 16384},
                 "capabilities": {"vision": True, "streaming": True, "tools": True}}
         for name in ["fornace-fast", "fornace-max"]:
@@ -87,7 +88,11 @@ def stop(process):
             process.wait(timeout=5)
 
 
-def pi_turn(root, port, session_id, token=TOKEN):
+def pi_turn(root, port, session_id, token=TOKEN, compact=False):
+    if compact:
+        config = root / "config"
+        config.mkdir(exist_ok=True)
+        (config / "settings.json").write_text(json.dumps({"compaction": {"keepRecentTokens": 1}}))
     command = [os.environ.get("PI_TEST_BIN", "pi"), "--offline", "--no-extensions", "--extension",
                os.environ.get("PI_TEST_EXTENSION", str(REPO / "extensions/mantice-models.ts")), "--no-skills", "--no-themes",
                "--no-prompt-templates", "--no-context-files", "--no-tools", "--provider", "mantice",
@@ -125,6 +130,30 @@ def pi_turn(root, port, session_id, token=TOKEN):
                     break
             assert final and final.get("stopReason") == "stop", final
             assert any(part.get("text") == "fixture OK" for part in final["content"]), final
+            if compact:
+                for command in [{"type": "compact", "id": "fixture-compact"}, prompt] * 2:
+                    process.stdin.write(json.dumps(command) + "\n")
+                    process.stdin.flush()
+                    deadline = time.monotonic() + 30
+                    completed = False
+                    diagnostics = []
+                    while time.monotonic() < deadline:
+                        event = events.get(timeout=max(0.01, deadline - time.monotonic()))
+                        assert event is not None, "Pi exited during compaction lifecycle"
+                        if event.get("type") in ["extension_error", "extension_ui_request"]:
+                            diagnostics.append(event)
+                        if command["type"] == "compact" and event.get("id") == "fixture-compact":
+                            assert event.get("success"), event
+                            assert event.get("data", {}).get("summary") == "fixture OK", (event, diagnostics)
+                            completed = True
+                            break
+                        if command["type"] == "prompt" and event.get("type") == "message_end":
+                            if event.get("message", {}).get("role") == "assistant":
+                                assert event["message"].get("stopReason") == "stop", event
+                        if command["type"] == "prompt" and event.get("type") == "agent_end":
+                            completed = True
+                            break
+                    assert completed, "compaction lifecycle timed out"
         finally:
             stop(process)
 
@@ -179,6 +208,16 @@ def run(root):
                            for part in content), "triggering image changed or dropped"
             with sqlite3.connect(database) as db:
                 assert db.execute("SELECT COUNT(*) FROM session_route_preferences").fetchone()[0] == 3
+            start = len(CALLS)
+            pi_turn(root, port, a, compact=True)
+            lifecycle = CALLS[start:]
+            assert [body["model"] for body in lifecycle] == [
+                "accept-image", "reject-image", "accept-image", "accept-image", "accept-image", "accept-image"
+            ], [body["model"] for body in lifecycle]
+            assert lifecycle[1]["messages"] == lifecycle[2]["messages"], "compaction input changed on failover"
+            assert "Summarize this coding-agent conversation" in json.dumps(lifecycle[1]), lifecycle[1]
+            assert MESSAGE in json.dumps(lifecycle[-1]), lifecycle[-1]
+            print("session-compaction-lifecycle: PASS; real Pi RPC prompt/compact/prompt retains session preference")
             print("session-recovery-chain: PASS; real Pi + Mantice, full text/image failover, resumed preference, other-session and credential isolation")
         finally:
             stop(gateway)
