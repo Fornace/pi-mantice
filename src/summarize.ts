@@ -9,6 +9,7 @@ import type {
   SessionBeforeCompactEvent,
 } from "@earendil-works/pi-coding-agent";
 import type { TextClass } from "./classes.ts";
+import { gatewaySessionIdentity, SESSION_HEADER } from "./session-identity.ts";
 
 export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal">;
 
@@ -19,9 +20,10 @@ export interface CompactionDeps {
   complete: (
     model: unknown,
     context: { messages: unknown[] },
-    options: { maxTokens: number; signal: AbortSignal; cacheRetention: string; sessionId: string },
+    options: { maxTokens: number; signal: AbortSignal; cacheRetention: string; sessionId: string; headers?: Record<string, string> },
   ) => Promise<{ text: string; usage?: CompactionResult["usage"] }>;
   newSessionId: () => string;
+  conversationId?: string;
   notify: (message: string, level?: "info" | "warning" | "error") => void;
 }
 
@@ -65,6 +67,7 @@ export async function compactWithClassChain(
     content: [{ type: "text", text: prompt }],
     timestamp: Date.now(),
   }];
+  const identity = gatewaySessionIdentity(deps.conversationId ?? "");
 
   for (const id of deps.modelIds) {
     if (signal.aborted) return undefined;
@@ -76,6 +79,7 @@ export async function compactWithClassChain(
         signal,
         cacheRetention: "none",
         sessionId: deps.newSessionId(),
+        ...(identity ? { headers: { [SESSION_HEADER]: identity } } : {}),
       });
       const summary = response.text?.trim();
       if (!summary) throw new Error(`class route ${id} returned an empty summary`);

@@ -60,3 +60,26 @@ Follow-up verification17:20UTC:
 - Fresh SQLite transaction and Pi RPC docs HTTP20017:17UTC, installed source
   and CLI contract inspected. The combined gate belongs in Mantice CI because
   Mantice is private; pi-mantice CI must not assume cross-repository credentials.
+
+## Direct compaction identity (2026-09-05)
+
+The ordinary provider-header event does not cover modelRegistry.complete calls.
+Compaction now supplies X-Mantice-Session-ID from the persisted conversation ID
+as an explicit option, independently of cacheRetention:none and its existing
+fresh SDK sessionId. Class order, prompt and cancellation behavior unchanged.
+Missing identity omits the header instead of inventing shared scope.
+
+Installed Pi0.84.4 types and openai-completions.js verified custom headers survive
+cacheRetention:none. Official extensions docs HTTP20017:45UTC reviewed:
+https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/docs/extensions.md
+The docs describe the ordinary header hook; installed source confirms the
+separate ModelRegistry delegation and custom header options.
+
+31 unit tests/typecheck pass. New verify-compaction-wire.mjs uses actual
+ModelRuntime/ModelRegistry and loopback HTTP with isolated auth/model storage:
+three calls preserve one stable header for same conversation, differ for another,
+keep prompt/auth, omit prompt_cache_key with cacheRetention:none. Raw result:
+`compaction-wire: PASS; real ModelRegistry.complete, cache none, stable scoped header, prompt/auth preserved`
+This verifies direct transport, not an interactive /compact lifecycle. CI and
+publish gates include it. Installed75bdb3b does not yet contain this follow-up;
+rollout remains separate pending CI. No live upstream or production mutations.

@@ -22,6 +22,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:session-wire
+      - run: npm run test:compaction-wire
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: none

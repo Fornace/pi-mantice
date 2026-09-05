@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compactWithClassChain, summaryPrompt } from '../src/summarize.ts';
+import { gatewaySessionIdentity, SESSION_HEADER } from '../src/session-identity.ts';
 
 function event(reason = 'threshold', overrides = {}) {
   return {
@@ -33,6 +34,37 @@ function deps(behavior) {
 }
 
 const serialize = (messages) => JSON.stringify(messages);
+
+test('compaction preserves stable conversation identity independently of disabled cache', async () => {
+  const { value } = deps(() => {});
+  const calls = [];
+  value.conversationId = 'persistent-conversation';
+  value.newSessionId = () => `fresh-cache-${calls.length}`;
+  value.complete = async (model, context, options) => {
+    calls.push({ context, options });
+    if (calls.length === 1) throw new Error('503 unavailable');
+    return { text: 'summary' };
+  };
+  await compactWithClassChain(event(), value, serialize);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].context, calls[1].context);
+  for (const { options } of calls) {
+    assert.equal(options.cacheRetention, 'none');
+    assert.deepEqual(options.headers, {
+      [SESSION_HEADER]: gatewaySessionIdentity('persistent-conversation'),
+    });
+  }
+  assert.notEqual(calls[0].options.sessionId, calls[1].options.sessionId);
+});
+
+test('missing compaction conversation identity does not invent shared scope', async () => {
+  const { value } = deps(() => {});
+  value.complete = async (_model, _context, options) => {
+    assert.equal(options.headers, undefined);
+    return { text: 'summary' };
+  };
+  await compactWithClassChain(event(), value, serialize);
+});
 
 test('empty span skips custom compaction entirely', async () => {
   const { value } = deps(() => { throw new Error('must not call'); });

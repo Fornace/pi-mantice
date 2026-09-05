@@ -149,6 +149,7 @@ export default async function register(api: ExtensionAPI) {
         return { text, usage: response.usage };
       },
       newSessionId: randomUUID,
+      conversationId: ctx.sessionManager.getSessionId(),
       notify: (message, level = "info") => ctx.ui.notify(message, level),
     }, (messages) => serializeConversation(convertToLlm(messages as never)));
   });
