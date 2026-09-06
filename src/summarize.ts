@@ -11,7 +11,7 @@ import type {
 import type { TextClass } from "./classes.ts";
 import { gatewaySessionIdentity, SESSION_HEADER } from "./session-identity.ts";
 
-export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal">;
+export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal" | "customInstructions">;
 
 export interface CompactionDeps {
   chain: TextClass[];
@@ -36,7 +36,11 @@ const SUMMARY_FORMAT = `## Goal
 ## Next Steps
 ## Critical Context`;
 
-export function summaryPrompt(conversationText: string, previousSummary?: string | null): string {
+export function summaryPrompt(
+  conversationText: string,
+  previousSummary?: string | null,
+  customInstructions?: string,
+): string {
   const prior = previousSummary
     ? `\n\nPrevious session summary to carry forward:\n${previousSummary}`
     : "";
@@ -47,7 +51,9 @@ in this exact section format:\n${SUMMARY_FORMAT}
 
 <conversation>
 ${conversationText}
-</conversation>`;
+</conversation>${customInstructions?.trim()
+    ? `\n\nAdditional instructions for this compaction:\n${customInstructions}`
+    : ""}`;
 }
 
 export async function compactWithClassChain(
@@ -62,7 +68,7 @@ export async function compactWithClassChain(
   const messages = [...preparation.messagesToSummarize, ...preparation.turnPrefixMessages];
   if (!messages.length || !deps.modelIds.length) return undefined;
   const conversationText = serialize(messages as never[]);
-  const prompt = summaryPrompt(conversationText, preparation.previousSummary);
+  const prompt = summaryPrompt(conversationText, preparation.previousSummary, event.customInstructions);
   const summaryMessages = [{
     role: "user",
     content: [{ type: "text", text: prompt }],
