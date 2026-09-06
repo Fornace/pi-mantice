@@ -11,6 +11,7 @@ import type {
 import type { TextClass } from "./classes.ts";
 import { gatewaySessionIdentity, SESSION_HEADER } from "./session-identity.ts";
 import { CompactionPolicyError } from "./summary-completion.ts";
+import { CompactionTransientError, waitForCompactionRecovery } from "./summary-recovery.ts";
 
 export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal" | "customInstructions">;
 
@@ -25,6 +26,8 @@ export interface CompactionDeps {
   ) => Promise<{ text: string; usage?: CompactionResult["usage"] }>;
   newSessionId: () => string;
   conversationId?: string;
+  recoverTransientFailures?: boolean;
+  waitForRecovery?: (signal: AbortSignal) => Promise<boolean>;
   notify: (message: string, level?: "info" | "warning" | "error") => void;
 }
 
@@ -77,42 +80,54 @@ export async function compactWithClassChain(
   }];
   const identity = gatewaySessionIdentity(deps.conversationId ?? "");
 
-  for (const id of deps.modelIds) {
-    if (signal.aborted) return { cancel: true };
-    const model = deps.resolveModel(id);
-    if (!model) continue;
-    try {
-      const response = await deps.complete(model, { messages: summaryMessages }, {
-        maxTokens: SUMMARY_MAX_TOKENS,
-        signal,
-        cacheRetention: "none",
-        sessionId: deps.newSessionId(),
-        ...(identity ? { headers: { [SESSION_HEADER]: identity } } : {}),
-      });
+  let candidates = deps.modelIds;
+  for (;;) {
+    const retryCandidates: string[] = [];
+    for (const id of candidates) {
       if (signal.aborted) return { cancel: true };
-      const summary = response.text?.trim();
-      if (!summary) throw new Error(`class route ${id} returned an empty summary`);
-      return {
-        compaction: {
-          summary,
-          firstKeptEntryId: preparation.firstKeptEntryId,
-          tokensBefore: preparation.tokensBefore,
-          usage: response.usage,
-        },
-      };
-    } catch (error) {
-      if (error instanceof CompactionPolicyError) {
-        deps.notify(error.message, "error");
-        return { cancel: true };
+      const model = deps.resolveModel(id);
+      if (!model) continue;
+      try {
+        const response = await deps.complete(model, { messages: summaryMessages }, {
+          maxTokens: SUMMARY_MAX_TOKENS,
+          signal,
+          cacheRetention: "none",
+          sessionId: deps.newSessionId(),
+          ...(identity ? { headers: { [SESSION_HEADER]: identity } } : {}),
+        });
+        if (signal.aborted) return { cancel: true };
+        const summary = response.text?.trim();
+        if (!summary) throw new Error(`class route ${id} returned an empty summary`);
+        return {
+          compaction: {
+            summary,
+            firstKeptEntryId: preparation.firstKeptEntryId,
+            tokensBefore: preparation.tokensBefore,
+            usage: response.usage,
+          },
+        };
+      } catch (error) {
+        if (error instanceof CompactionPolicyError) {
+          deps.notify(error.message, "error");
+          return { cancel: true };
+        }
+        if (signal.aborted || (error instanceof Error && error.name === "AbortError")) {
+          return { cancel: true };
+        }
+        if (error instanceof CompactionTransientError) retryCandidates.push(id);
+        deps.notify(
+          `pi-mantice: class-route compaction failed on ${id}: ${error instanceof Error ? error.message : error}`,
+          "warning",
+        );
       }
-      if (signal.aborted || (error instanceof Error && error.name === "AbortError")) {
-        return { cancel: true };
-      }
-      deps.notify(
-        `pi-mantice: class-route compaction failed on ${id}: ${error instanceof Error ? error.message : error}`,
-        "warning",
-      );
     }
+    if (reason === "manual" || !deps.recoverTransientFailures || !retryCandidates.length) break;
+    deps.notify(
+      "pi-mantice: compaction providers temporarily unavailable; transcript preserved. Retrying eligible class routes in 30–60s; cancel to stop.",
+      "warning",
+    );
+    if (!await (deps.waitForRecovery ?? waitForCompactionRecovery)(signal)) return { cancel: true };
+    candidates = retryCandidates;
   }
 
   if (reason === "manual") {

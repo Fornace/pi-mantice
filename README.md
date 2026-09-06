@@ -19,11 +19,16 @@ Absorbs and replaces `fornace-pi-models`.
   client-side window silently strangles compaction (see the 2026-09-03
   incident notes in `docs/PLAN.md`).
 - Compaction summarizes with the flash class route (`fornace-flash`),
-  falls back to `fornace-fast`, and cancels rather than spending the session's
+  falls back to `fornace-fast`, and never automatically spends the session's
   max-class model on summarization. Usage is recorded into session totals.
   Transient summary failures use Pi's bounded retry helper and persisted retry
   settings before class fallback. Cancellation interrupts backoff; recognized
   policy rejections preserve the transcript without retry or class fallback.
+  On stable Pi >= 0.85.1 with retries enabled, automatic compaction keeps waiting
+  through transient class-route outages, retrying eligible routes every 30–60s
+  until recovery or cancellation. Permanent failures are not repeatedly called.
+  Older runtimes retain bounded recovery because their RPC abort does not cancel
+  compaction reliably. Manual compaction retains Pi's default fallback behavior.
 - Overflow recovery: upstream context-miss wordings (including Z.ai code
   1261) are canonicalized to `context_length_exceeded` so Pi auto-compacts
   and retries once. Rate limits and route-availability errors are never

@@ -12,7 +12,8 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { convertToLlm, serializeConversation, SettingsManager } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, serializeConversation, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
+import { isRetryableAssistantError } from "@earendil-works/pi-ai";
 import {
   PROVIDERS,
   PROVIDER_API_KEYS,
@@ -28,6 +29,7 @@ import {
 import { COMPACTION_CHAIN, classOf } from "../src/classes.ts";
 import { compactWithClassChain } from "../src/summarize.ts";
 import { completeSummaryWithRetry } from "../src/summary-completion.ts";
+import { CompactionTransientError, supportsCompactionRecovery } from "../src/summary-recovery.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
 
@@ -140,6 +142,7 @@ export default async function register(api: ExtensionAPI) {
     return compactWithClassChain(event, {
       chain: COMPACTION_CHAIN,
       modelIds,
+      recoverTransientFailures: retry.enabled && supportsCompactionRecovery(VERSION),
       resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
       complete: async (model, context, options) => {
         const response = await completeSummaryWithRetry(() => ctx.modelRegistry.complete(
@@ -150,6 +153,9 @@ export default async function register(api: ExtensionAPI) {
         // A nonempty length-stopped summary is still incomplete. Never commit
         // it as replacement context; allow the compaction chain to recover.
         if (response.stopReason !== "stop") {
+          if (retry.enabled && isRetryableAssistantError(response)) {
+            throw new CompactionTransientError(response.errorMessage || "Transient compaction failure");
+          }
           const error = new Error(response.errorMessage || `Compaction ${response.stopReason}`);
           if (response.stopReason === "aborted") error.name = "AbortError";
           throw error;
