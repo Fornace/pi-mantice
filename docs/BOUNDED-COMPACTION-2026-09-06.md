@@ -51,3 +51,39 @@ v0.85.0 Sep 4, v0.84.4 Aug 28:
 https://api.github.com/repos/earendil-works/pi/releases?per_page=3
 
 Live uptake and successful Torchio compaction require separate verification.
+
+## Live uptake verified 2026-09-06 09:23 UTC
+
+Supersedes the pending uptake statement above. Selected local detached release
+c505bc66098bcdc2c9a5f489c8c36bc65a1c7044 passed CI34010432235 and the real
+Pi0.84.4 loopback probe before the existing Torchio process was reloaded.
+The live UI then showed ordered compaction progress across18parts.
+
+The original session JSONL contains hook-provided compactions at04:38:33.430UTC
+(tokensBefore1023187, summary22808characters) and04:52:47.157UTC
+(tokensBefore1021729, summary22870characters). Different kept boundaries were
+recorded. Since the second,37assistant tool-use turns and10normal final replies
+were saved; no error/length stop was present in that inspected interval.
+At09:22UTC cmux showed6.8%context and a normal watcher acknowledgement.
+
+Reload released sentia-inbox and eugeny-telemetry-sync-v3 at04:04:52UTC;
+both were reclaimed at04:04:57UTC by the same PID17318. The visible SIGTERM
+was the old watcher child exiting during reload, not loss of the session.
+Telemetry heartbeats and normal assistant replies continued afterward.
+
+Coordination scope: gateway/plugin repair and monitoring only. Ask the owning
+agent to retry genuinely pending blocked requests within existing authority;
+do not perform its research/crawls/UI work or resume deliberately paused goals.
+Such a request was sent at09:23UTC; its response remains to be checked.
+
+Current official cmux CLI contract fetchedHTTP200 via Scrapling, installed
+CLI help inspected before coordination:
+https://raw.githubusercontent.com/manaflow-ai/cmux/main/docs/cli-contract.md
+Pi release freshness recheck remains0.85.1/Sep5,0.85.0/Sep4,0.84.4/Aug28.
+This proves this session's recovery, not indefinite fleet-wide reliability or
+npm publication of the plugin.
+
+09:24UTC coordination response completed normally at7.0%context. The owning
+agent confirmed the telemetry watcher is healthy and no gateway-blocked request
+remains pending. It explicitly preserved its deliberately paused goal and did
+not restart stopped tasks. Root performed no sibling task work in this check.
