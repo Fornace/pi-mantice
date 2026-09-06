@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, serializeConversation, SettingsManager } from "@earendil-works/pi-coding-agent";
 import {
   PROVIDERS,
   PROVIDER_API_KEYS,
@@ -27,6 +27,7 @@ import {
 } from "../src/catalog.ts";
 import { COMPACTION_CHAIN, classOf } from "../src/classes.ts";
 import { compactWithClassChain } from "../src/summarize.ts";
+import { completeSummaryWithRetry } from "../src/summary-completion.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
 
@@ -133,16 +134,19 @@ export default async function register(api: ExtensionAPI) {
     if (!rows.length) return undefined;
     const modelIds = compactionModelIds(rows.filter((row) => classOf(row) !== null), COMPACTION_CHAIN);
     if (!modelIds.length) return undefined;
+    const retry = SettingsManager.create(ctx.cwd, undefined, {
+      projectTrusted: ctx.isProjectTrusted(),
+    }).getRetrySettings();
     return compactWithClassChain(event, {
       chain: COMPACTION_CHAIN,
       modelIds,
       resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
       complete: async (model, context, options) => {
-        const response = await ctx.modelRegistry.complete(
+        const response = await completeSummaryWithRetry(() => ctx.modelRegistry.complete(
           model as never,
           context as never,
           options as never,
-        );
+        ), retry, options.signal, (message) => ctx.ui.notify(message, "warning"));
         // A nonempty length-stopped summary is still incomplete. Never commit
         // it as replacement context; allow the compaction chain to recover.
         if (response.stopReason !== "stop") {

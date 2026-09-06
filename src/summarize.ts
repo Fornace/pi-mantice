@@ -10,6 +10,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { TextClass } from "./classes.ts";
 import { gatewaySessionIdentity, SESSION_HEADER } from "./session-identity.ts";
+import { CompactionPolicyError } from "./summary-completion.ts";
 
 export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal" | "customInstructions">;
 
@@ -100,6 +101,10 @@ export async function compactWithClassChain(
         },
       };
     } catch (error) {
+      if (error instanceof CompactionPolicyError) {
+        deps.notify(error.message, "error");
+        return { cancel: true };
+      }
       if (signal.aborted || (error instanceof Error && error.name === "AbortError")) {
         return { cancel: true };
       }

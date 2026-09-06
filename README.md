@@ -21,6 +21,9 @@ Absorbs and replaces `fornace-pi-models`.
 - Compaction summarizes with the flash class route (`fornace-flash`),
   falls back to `fornace-fast`, and cancels rather than spending the session's
   max-class model on summarization. Usage is recorded into session totals.
+  Transient summary failures use Pi's bounded retry helper and persisted retry
+  settings before class fallback. Cancellation interrupts backoff; recognized
+  policy rejections preserve the transcript without retry or class fallback.
 - Overflow recovery: upstream context-miss wordings (including Z.ai code
   1261) are canonicalized to `context_length_exceeded` so Pi auto-compacts
   and retries once. Rate limits and route-availability errors are never
