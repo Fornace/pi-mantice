@@ -14,7 +14,7 @@ import { CompactionPolicyError } from "./summary-completion.ts";
 import { CompactionTransientError, waitForCompactionRecovery } from "./summary-recovery.ts";
 import { addSummaryUsage, splitSummaryInput, SUMMARY_CARRY_BYTES, SUMMARY_CHUNK_BYTES } from "./summary-chunks.ts";
 import { summaryCheckpointKey, type SummaryCheckpointStore } from "./summary-checkpoint.ts";
-import { pruneSummaryToolResults, SUMMARY_PRUNING_VERSION } from "./summary-pruning.ts";
+import { pruneSummaryToolResults, SUMMARY_PRUNING_VERSION, PRUNING_CONTEXT } from "./summary-pruning.ts";
 
 export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal" | "customInstructions">;
 
@@ -29,6 +29,7 @@ export interface CompactionDeps {
   ) => Promise<{ text: string; usage?: CompactionResult["usage"] }>;
   newSessionId: () => string;
   conversationId?: string;
+  history?: unknown[];
   recoverTransientFailures?: boolean;
   waitForRecovery?: (signal: AbortSignal) => Promise<boolean>;
   checkpoints?: SummaryCheckpointStore;
@@ -75,10 +76,10 @@ export async function compactWithClassChain(
   if (signal.aborted) return { cancel: true };
   const messages = [...preparation.messagesToSummarize, ...preparation.turnPrefixMessages];
   if (!messages.length || !deps.modelIds.length) return undefined;
-  const pruned = pruneSummaryToolResults(messages);
-  const conversationText = serialize(pruned.messages);
-  if (pruned.strippedResults) {
-    deps.notify(`pi-mantice: stripped ${pruned.strippedResults} bulky successful tool results before compaction; errors and original transcript retained.`, "info");
+  const pruned = pruneSummaryToolResults(messages, deps.history);
+  const conversationText = (pruned.prunedMessages ? `${PRUNING_CONTEXT}\n\n` : "") + serialize(pruned.messages);
+  if (pruned.prunedMessages) {
+    deps.notify(`pi-mantice: pruned ${pruned.prunedMessages} older non-user messages; full user messages and last two rounds retained.`, "info");
   }
   const encoder = new TextEncoder();
   if (encoder.encode(event.customInstructions ?? "").length > SUMMARY_CARRY_BYTES) {
@@ -89,7 +90,7 @@ export async function compactWithClassChain(
   const input = prior ? `Previous session summary:\n${prior}\n\nConversation in chronological order:\n${conversationText}` : conversationText;
   if (encoder.encode(input).length <= SUMMARY_CHUNK_BYTES) {
     // Default Pi fallback would reconstruct the unpruned oversized request.
-    return compactPart(event, deps, conversationText, pruned.strippedResults === 0);
+    return compactPart(event, deps, conversationText, pruned.prunedMessages === 0);
   }
   const parts = splitSummaryInput(input);
   const checkpointKey = summaryCheckpointKey([

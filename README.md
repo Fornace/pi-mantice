@@ -28,7 +28,19 @@ Absorbs and replaces `fornace-pi-models`.
   through transient class-route outages, retrying eligible routes every 30–60s
   until recovery or cancellation. Permanent failures are not repeatedly called.
   Older runtimes retain bounded recovery because their RPC abort does not cancel
-  compaction reliably. Manual compaction retains Pi's default fallback behavior.
+  compaction reliably. Manual compaction can use Pi's default fallback only when
+  no pruning or chunking occurred.
+- Before compaction, preserve all user messages and the last two user-led rounds.
+  Aggressively prune older non-user history: strip reasoning and tool payloads,
+  retain compact tool-call references and paths, bound older assistant text, and
+  collapse exact repeated replies. Original session history remains recoverable.
+  Recent tool text bypasses Pi's default serializer truncation. Oversized input
+  is chunked; completed parts are checkpointed for interrupted compactions.
+- Native [RTK](https://github.com/rtk-ai/rtk) integration rewrites supported Bash
+  commands for Mantice sessions to return compact output. Install the `rtk`
+  binary on PATH (`brew install rtk` on macOS); no separate Pi RTK extension is
+  needed. An existing RTK extension can coexist. `RTK_DISABLED=1` opts out;
+  missing RTK preserves normal command execution and history pruning.
 - Overflow recovery: upstream context-miss wordings (including Z.ai code
   1261) are canonicalized to `context_length_exceeded` so Pi auto-compacts
   and retries once. Rate limits and route-availability errors are never

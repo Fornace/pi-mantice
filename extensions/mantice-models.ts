@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { convertToLlm, serializeConversation, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
+import { sessionEntryToContextMessages, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
 import { isRetryableAssistantError } from "@earendil-works/pi-ai";
 import {
   PROVIDERS,
@@ -33,6 +33,8 @@ import { completeSummaryWithRetry } from "../src/summary-completion.ts";
 import { CompactionTransientError, supportsCompactionRecovery } from "../src/summary-recovery.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
+import { registerRtk } from "../src/rtk.ts";
+import { serializeSummaryHistory } from "../src/summary-serialization.ts";
 
 const COMPAT = {
   supportsDeveloperRole: false,
@@ -90,6 +92,7 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 
 export default async function register(api: ExtensionAPI) {
   registerSessionIdentity(api);
+  registerRtk(api);
   let rows: CatalogRow[];
   try {
     rows = await resolveCatalog();
@@ -143,6 +146,7 @@ export default async function register(api: ExtensionAPI) {
     return compactWithClassChain(event, {
       chain: COMPACTION_CHAIN,
       modelIds,
+      history: ctx.sessionManager.getBranch().flatMap(sessionEntryToContextMessages),
       checkpoints: createSummaryCheckpointStore(ctx.sessionManager.getBranch(), (type, data) => api.appendEntry(type, data)),
       recoverTransientFailures: retry.enabled && supportsCompactionRecovery(VERSION),
       resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
@@ -170,6 +174,6 @@ export default async function register(api: ExtensionAPI) {
       newSessionId: randomUUID,
       conversationId: ctx.sessionManager.getSessionId(),
       notify: (message, level = "info") => ctx.ui.notify(message, level),
-    }, (messages) => serializeConversation(convertToLlm(messages as never)));
+    }, serializeSummaryHistory);
   });
 }
