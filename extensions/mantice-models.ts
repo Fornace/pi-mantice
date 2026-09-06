@@ -143,7 +143,9 @@ export default async function register(api: ExtensionAPI) {
           context as never,
           options as never,
         );
-        if (response.stopReason === "error" || response.stopReason === "aborted") {
+        // A nonempty length-stopped summary is still incomplete. Never commit
+        // it as replacement context; allow the compaction chain to recover.
+        if (response.stopReason !== "stop") {
           const error = new Error(response.errorMessage || `Compaction ${response.stopReason}`);
           if (response.stopReason === "aborted") error.name = "AbortError";
           throw error;
