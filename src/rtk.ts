@@ -2,7 +2,7 @@ import { isToolCallEventType, type ExtensionAPI } from "@earendil-works/pi-codin
 
 // RTK owns command recognition and shell syntax. Pi executes the rewritten
 // command once; this hook only asks RTK to classify and rewrite its text.
-export function registerRtk(api: ExtensionAPI): void {
+export function registerRtk(api: ExtensionAPI): { reset: () => void } {
   let unavailable = false;
   api.on("tool_call", async (event, ctx) => {
     if (unavailable || process.env.RTK_DISABLED === "1"
@@ -21,4 +21,5 @@ export function registerRtk(api: ExtensionAPI): void {
       ctx.ui.notify("pi-mantice: RTK unavailable; install rtk for compact command output. Pruning remains active.", "warning");
     }
   });
+  return { reset: () => { unavailable = false; } };
 }

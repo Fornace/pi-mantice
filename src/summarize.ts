@@ -30,6 +30,7 @@ export interface CompactionDeps {
   newSessionId: () => string;
   conversationId?: string;
   history?: unknown[];
+  allowDefaultFallback?: boolean;
   recoverTransientFailures?: boolean;
   waitForRecovery?: (signal: AbortSignal) => Promise<boolean>;
   checkpoints?: SummaryCheckpointStore;
@@ -90,7 +91,7 @@ export async function compactWithClassChain(
   const input = prior ? `Previous session summary:\n${prior}\n\nConversation in chronological order:\n${conversationText}` : conversationText;
   if (encoder.encode(input).length <= SUMMARY_CHUNK_BYTES) {
     // Default Pi fallback would reconstruct the unpruned oversized request.
-    return compactPart(event, deps, conversationText, pruned.prunedMessages === 0);
+    return compactPart(event, deps, conversationText, pruned.prunedMessages === 0 && deps.allowDefaultFallback !== false);
   }
   const parts = splitSummaryInput(input);
   const checkpointKey = summaryCheckpointKey([

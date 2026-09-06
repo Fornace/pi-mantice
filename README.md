@@ -64,6 +64,25 @@ Requires `MANTICE_API_KEY` (and optionally `MANTICE_BASE_URL`) in the
 environment. Remove any hand-written `mantice`/`fornace` blocks from
 `~/.pi/agent/models.json`; this package owns both providers.
 
+## Fast commands
+
+`/fast` shows help; subcommands have completion.
+
+| Command | Action |
+| --- | --- |
+| `/fast session [focus]` | Compact now through flash/fast, optionally focusing the summary, e.g. `/fast session deployment` |
+| `/fast preview` | Estimate pruning savings and chunk count without a model call |
+| `/fast status` | Show context usage, selected model, summarizers and saved compaction progress |
+| `/fast rtk` | Check the installed RTK binary and restore native integration after installation |
+
+Session compaction preserves the original history and uses the same aggressive
+pruning policy. It requires an idle Mantice session, does not resume its task,
+and never falls through to the session's max model. Empty or already compact
+sessions return a simple notice. Preview measures serialized active-context
+bytes; the actual summarization span also depends on Pi's retained window.
+Status, preview, help and RTK checks do not call a model. `RTK_DISABLED=1`
+remains respected by the RTK check.
+
 ## Setup for your own gateway
 
 `/mantice-setup` walks a fresh Mantice installation: probes your provider

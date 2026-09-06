@@ -35,6 +35,7 @@ import { createOverflowHandler, createResponseModelWatcher } from "../src/overfl
 import { registerSessionIdentity } from "../src/session-identity.ts";
 import { registerRtk } from "../src/rtk.ts";
 import { serializeSummaryHistory } from "../src/summary-serialization.ts";
+import { registerFastCommands } from "../src/fast-commands.ts";
 
 const COMPAT = {
   supportsDeveloperRole: false,
@@ -92,7 +93,7 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 
 export default async function register(api: ExtensionAPI) {
   registerSessionIdentity(api);
-  registerRtk(api);
+  const rtk = registerRtk(api);
   let rows: CatalogRow[];
   try {
     rows = await resolveCatalog();
@@ -111,6 +112,10 @@ export default async function register(api: ExtensionAPI) {
     });
   }
 
+  const fast = registerFastCommands(api, {
+    modelIds: () => compactionModelIds(rows.filter(row => classOf(row) !== null), COMPACTION_CHAIN),
+    resetRtk: rtk.reset,
+  });
   const overflow = createOverflowHandler([...PROVIDERS]);
   let responseWatcher: ((message: {
     role: string; provider?: string; model?: string; responseModel?: string; stopReason?: string;
@@ -147,6 +152,7 @@ export default async function register(api: ExtensionAPI) {
       chain: COMPACTION_CHAIN,
       modelIds,
       history: ctx.sessionManager.getBranch().flatMap(sessionEntryToContextMessages),
+      allowDefaultFallback: !fast.isCompacting(ctx.sessionManager.getSessionId()),
       checkpoints: createSummaryCheckpointStore(ctx.sessionManager.getBranch(), (type, data) => api.appendEntry(type, data)),
       recoverTransientFailures: retry.enabled && supportsCompactionRecovery(VERSION),
       resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
