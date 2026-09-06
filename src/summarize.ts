@@ -13,6 +13,8 @@ import { gatewaySessionIdentity, SESSION_HEADER } from "./session-identity.ts";
 import { CompactionPolicyError } from "./summary-completion.ts";
 import { CompactionTransientError, waitForCompactionRecovery } from "./summary-recovery.ts";
 import { addSummaryUsage, splitSummaryInput, SUMMARY_CARRY_BYTES, SUMMARY_CHUNK_BYTES } from "./summary-chunks.ts";
+import { summaryCheckpointKey, type SummaryCheckpointStore } from "./summary-checkpoint.ts";
+import { pruneSummaryToolResults, SUMMARY_PRUNING_VERSION } from "./summary-pruning.ts";
 
 export type CompactEvent = Pick<SessionBeforeCompactEvent, "preparation" | "reason" | "signal" | "customInstructions">;
 
@@ -29,6 +31,7 @@ export interface CompactionDeps {
   conversationId?: string;
   recoverTransientFailures?: boolean;
   waitForRecovery?: (signal: AbortSignal) => Promise<boolean>;
+  checkpoints?: SummaryCheckpointStore;
   notify: (message: string, level?: "info" | "warning" | "error") => void;
 }
 
@@ -72,7 +75,11 @@ export async function compactWithClassChain(
   if (signal.aborted) return { cancel: true };
   const messages = [...preparation.messagesToSummarize, ...preparation.turnPrefixMessages];
   if (!messages.length || !deps.modelIds.length) return undefined;
-  const conversationText = serialize(messages as never[]);
+  const pruned = pruneSummaryToolResults(messages);
+  const conversationText = serialize(pruned.messages);
+  if (pruned.strippedResults) {
+    deps.notify(`pi-mantice: stripped ${pruned.strippedResults} bulky successful tool results before compaction; errors and original transcript retained.`, "info");
+  }
   const encoder = new TextEncoder();
   if (encoder.encode(event.customInstructions ?? "").length > SUMMARY_CARRY_BYTES) {
     deps.notify("pi-mantice: compaction instructions exceed the bounded input budget; transcript preserved.", "error");
@@ -81,12 +88,30 @@ export async function compactWithClassChain(
   const prior = preparation.previousSummary;
   const input = prior ? `Previous session summary:\n${prior}\n\nConversation in chronological order:\n${conversationText}` : conversationText;
   if (encoder.encode(input).length <= SUMMARY_CHUNK_BYTES) {
-    return compactPart(event, deps, conversationText);
+    // Default Pi fallback would reconstruct the unpruned oversized request.
+    return compactPart(event, deps, conversationText, pruned.strippedResults === 0);
   }
   const parts = splitSummaryInput(input);
+  const checkpointKey = summaryCheckpointKey([
+    SUMMARY_PRUNING_VERSION, summaryCheckpointKey(messages),
+    input, deps.conversationId, deps.modelIds, preparation.firstKeptEntryId,
+    summaryPrompt("", undefined, event.customInstructions),
+  ]);
   let summary: string | undefined;
   let usage: CompactionResult["usage"];
-  for (let index = 0; index < parts.length; index++) {
+  let nextPart = 0;
+  try {
+    const saved = deps.checkpoints?.load(checkpointKey, parts.length);
+    if (saved) {
+      summary = saved.summary;
+      usage = saved.usage;
+      nextPart = saved.nextPart;
+      deps.notify(`pi-mantice: restored ${nextPart}/${parts.length} completed compaction parts; original transcript still retained.`, "info");
+    }
+  } catch {
+    deps.notify("pi-mantice: compaction checkpoint could not be read; starting from the preserved transcript.", "warning");
+  }
+  for (let index = nextPart; index < parts.length; index++) {
     if (signal.aborted) return { cancel: true };
     deps.notify(`pi-mantice: compacting history part ${index + 1}/${parts.length}; original transcript retained until all parts succeed.`, "info");
     const result = await compactPart({
@@ -100,6 +125,11 @@ export async function compactWithClassChain(
     if (encoder.encode(summary).length > SUMMARY_CARRY_BYTES) {
       deps.notify("pi-mantice: carried summary exceeds the bounded input budget; original transcript preserved.", "error");
       return { cancel: true };
+    }
+    try {
+      deps.checkpoints?.save({ key: checkpointKey, nextPart: index + 1, totalParts: parts.length, summary, usage, at: Date.now() });
+    } catch {
+      deps.notify("pi-mantice: compaction progress could not be checkpointed; current operation continues with original transcript preserved.", "warning");
     }
   }
   if (signal.aborted) return { cancel: true };

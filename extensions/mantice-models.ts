@@ -28,6 +28,7 @@ import {
 } from "../src/catalog.ts";
 import { COMPACTION_CHAIN, classOf } from "../src/classes.ts";
 import { compactWithClassChain } from "../src/summarize.ts";
+import { createSummaryCheckpointStore } from "../src/summary-checkpoint.ts";
 import { completeSummaryWithRetry } from "../src/summary-completion.ts";
 import { CompactionTransientError, supportsCompactionRecovery } from "../src/summary-recovery.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
@@ -142,6 +143,7 @@ export default async function register(api: ExtensionAPI) {
     return compactWithClassChain(event, {
       chain: COMPACTION_CHAIN,
       modelIds,
+      checkpoints: createSummaryCheckpointStore(ctx.sessionManager.getBranch(), (type, data) => api.appendEntry(type, data)),
       recoverTransientFailures: retry.enabled && supportsCompactionRecovery(VERSION),
       resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
       complete: async (model, context, options) => {
