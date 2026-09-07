@@ -113,3 +113,46 @@ and old terminal-policy sessions remain outside this narrow added transport loop
   No runtime upgrade or unrelated option change performed.
 - https://cli.github.com/manual/gh_run_view HTTP20003:53:06UTC;
   installed gh2.92.0 help and exact-source CI/deploy workflows inspected.
+
+## Local activation and source CI
+
+Gateway source fae91cc50182536d47c2f0874d903971d2b1da0c passed CI34081229215.
+Production deployment34081376235 still running at03:59:32UTC; no live claim yet.
+Extension24a870866e25b87653e64b3911d8926ed370efcd passed CI34081230298,
+including clean npm ci, typecheck,32checks, session-wire and compaction-wire.
+The same exact detached revision was installed under the existing immutable
+local release scheme; npm12.0.2 ci --ignore-scripts --no-audit --no-fund added
+130lockedpackages in1s. Fresh typecheck/session/compaction wire checks pass.
+User settings now select this revision for future Pi loads; exactly one package
+reference changed, independently compared as parsed JSON. No other settings
+changed. Backup settings.json.mantice-admission-20260907T0358.bak and old
+ed6dd09release remain available. No running sibling was reloaded or interrupted;
+selection is not evidence that every existing process has adopted the code.
+Additional real-timer cancellation:139ms,1HTTPcall, final aborted. Initial
+synthetic response omitted the real contract message and did not match Pi's
+exact error wrapper; corrected complete contract exercised actual cancellation.
+GitHub publication is verified; no npm publication/tag/authorization mutation.
+Official packages.md HTTP20003:55:30UTC and installed pi update/list help read:
+https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/docs/packages.md
+Local paths load in place; pinned git updates can reset/clean mutable clones.
+We preserved old release bytes and used a new detached revision instead.
+https://docs.npmjs.com/cli/v12/commands/npm-ci HTTP20003:56:41UTC;
+installed help and lockfile/ignore-scripts contract read before the fresh install.
+
+## Production verification
+
+Gateway fae91cc deployment34081376235 completed successfully; exact-source
+step03:59:30UTC, restart_ready_ms9194, inventory21|101|44|20|33.
+Read-only proof2026-09-07T04:00:18.139339UTC: activeblue PID2650577,
+started03:59:17UTC, invocation49bee2f2d1a342eb8b866d020e4bb58a.
+Candidate, installed and loaded Linux SHA256 all match:
+273bba055e4ee77e4f83bdc16f4d658e5830184a989fb3367884bc926d2c1d92.
+Readiness HTTP200 raw body:
+{"deployments":101,"providers":21,"status":"ok","uptime_seconds":61}
+Routing revision0a2f516419a8a2259f6eb2f3ed991c641e3105f4d8bcf240b03404965c86be8a
+unchanged. Payload limit268435456; reserved/waiting/deferred/rejected all0.
+No artificial production overload, inference replay or routing write.
+Native fleet04:00:05.325–04:00:09.069UTC:45panes,0changes,43reused,
+5policyerrors, no notification failure. No historical-policy recovery claimed.
+Past30-day official packages.md history rechecked04:00UTC: Aug24 managed
+installation4af9d21d and Aug23 dependency-treef8f03460; no new install change.

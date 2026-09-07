@@ -49,7 +49,8 @@ Absorbs and replaces `fornace-pi-models`.
   (`fornace-max served by glm-5.3`), context math untouched.
 - On Pi >= 0.85.1 with retries enabled, explicit gateway admission failures
   keep the original request alive and retry every 30–60 seconds until capacity
-  returns or you cancel. Requires the gateway's `X-Mantice-Admission` marker,
+  returns or you cancel, including pre-execution deployment drain/quiesce and
+  full worker pools. Requires the gateway's `X-Mantice-Admission` marker,
   recognized admission code, and `upstream_started: false` on every HTTP attempt.
   No new user message or history rewrite occurs. Policy rejections, ambiguous
   transport failures, partial output and unmarked upstream errors keep their

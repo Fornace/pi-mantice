@@ -2,6 +2,8 @@
 // Do not infer acceptance from prose, a status alone, or an echoed request.
 export const ADMISSION_CODES = new Set([
   "request_capacity_unavailable", "upload_authentication_unavailable",
+  "gateway_draining", "gateway_quiescing",
+  "worker_pool_unavailable", "worker_capacity_unavailable",
 ]);
 
 export function admissionCode(value: unknown): string | undefined {
