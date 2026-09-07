@@ -124,5 +124,21 @@ npm run audit     # spawn a real Pi and compare its registry to the live catalog
 
 ## Publishing
 
-First publish is manual (`npm login` + `npm publish`); from there the tag
-push `v*` workflow runs OIDC trusted publishing with provenance.
+The tag-push `v*` workflow uses npm trusted publishing with provenance. It
+requires effective npm authorization for `Fornace/pi-mantice`, `publish.yml`,
+and direct publishing. An npm E404 alone does not identify which permission
+or identity setting is wrong; inspect the authenticated package settings.
+Do not replace an existing staged-approval policy without owner authorization.
+
+For a new release, review and validate current main, choose an unused package
+version and matching fresh tag, and push through this workflow. It checks that
+the tag matches `package.json` and that the checked-out event commit is current
+main, both before validation and immediately before publishing. A main update
+detected at either check stops publication. Never move an existing tag to work
+around this. Tracked source changes also stop publication. These checks are
+not an atomic lock on future main updates.
+Older workflow runs retain their old workflow and do not gain this guard:
+rerunning the old `v1.0.1` run cannot distribute newer recovery fixes.
+
+Source push, npm publication, installation and loaded-session adoption are
+separate states. Verify registry version and gitHead after a successful publish.

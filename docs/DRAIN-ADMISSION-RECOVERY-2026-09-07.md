@@ -75,3 +75,42 @@ HTTP20004:13:55 plus installed gh2.92.0 help read. CI-only deploy remains requir
 At receipt creation changes are LOCAL, not yet deployed or selected locally.
 Fleet independent04:11:42 check:5exactpolicy errors unchanged, no new transient
 failure eligible for coordinator input; no sibling mutations or policy replay.
+
+## Source publication and local selection
+
+Gateway ba1dd9e48e0e0703b284dbdcf95794a41c9ae68f pushedmain;
+CI34082468632 running at04:18:23UTC. No production claim yet.
+Pi d3c7f40db7b146c46af972e0934d8fe120a0723d pushedmain and
+CI34082469621 passed04:16:38UTC, including clean install and both real wire gates.
+New detached release installed under the existing immutable package-releases
+scheme. npm12.0.2 ci --ignore-scripts --no-audit --no-fund installed130locked
+packages; fresh typecheck/session-wire/compaction-wire all pass, worktreeclean.
+Pi settings select d3c7f40 for future loads. Exactly one package path changed,
+verified by full parsed-JSON equality after only the expected substitution.
+Backup settings.json.mantice-drain-20260907T0418.bak and old24a8708 remain.
+No existing sibling reload or task resume; process adoption is not established.
+No npm publication or tag; source publication is not registry publication.
+
+Official packages.md and npm-ci pages re-fetchedHTTP20004:16:55–56UTC:
+https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/docs/packages.md
+https://docs.npmjs.com/cli/v12/commands/npm-ci
+Installed pi list and npm ci help read. Local paths load in place; locked
+ci preserves manifests and ignore-scripts avoids install-time execution.
+
+## Verified production uptake
+
+CI34082468632 and deploy34082642735 both succeeded for exact gateway
+ba1dd9e48e0e0703b284dbdcf95794a41c9ae68f. Stage/deploy completed04:21:15UTC;
+restart_ready_ms9500. Candidate, installed and loaded binary SHA256 match:
+34abd26b9188b5492e380264b5caad87f8d98bfb9791a41f8f53d200e74afc02.
+Read-only proof2026-09-07T04:21:57.301519UTC: activegreen PID2660078,
+started04:21:01UTC, invocationca0bdda5746b4a5ebcfdef9b0cb9e46d.
+Readiness HTTP200 raw body:
+{"deployments":101,"providers":21,"status":"ok","uptime_seconds":56}
+Routingrevision0a2f516419a8a2259f6eb2f3ed991c641e3105f4d8bcf240b03404965c86be8a,
+inventory21providers/101deployments/44groups/20aliases/33fallbacks unchanged.
+Payloadlimit268435456; reserved/waiting/deferred/rejected0.
+No production overload or quiesce experiment, route write or inference replay.
+Fleet04:20:05.004–04:20:08.652UTC:45panes,0changes,43reused,5policyerrors,
+notificationFailedfalse. Client selectedd3c7f40, existing session adoption and
+npm publication unverified; no all-healthy claim. Broad goal remains active.
