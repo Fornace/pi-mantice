@@ -11,7 +11,7 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { sessionEntryToContextMessages, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
 import { isRetryableAssistantError } from "@earendil-works/pi-ai";
 import {
@@ -93,6 +93,11 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 
 export default async function register(api: ExtensionAPI) {
   registerSessionIdentity(api);
+  let admissionContext: ExtensionContext | undefined;
+  api.on("session_start", (_event, ctx) => { admissionContext = ctx; });
+  api.on("session_shutdown", () => { admissionContext = undefined; });
+  const admission = supportsCompactionRecovery(VERSION)
+    ? await import("../src/admission-recovery.ts") : undefined;
   const rtk = registerRtk(api);
   let rows: CatalogRow[];
   try {
@@ -108,6 +113,12 @@ export default async function register(api: ExtensionAPI) {
       api: "openai-completions",
       apiKey: PROVIDER_API_KEYS[provider],
       models: providerModels(rows, provider),
+      ...(admission ? { streamSimple: (model, context, options) => admission.admissionStream(model, context, options, {
+        enabled: () => !!admissionContext && SettingsManager.create(admissionContext.cwd, undefined, {
+          projectTrusted: admissionContext.isProjectTrusted(),
+        }).getRetrySettings().enabled,
+        notify: (message) => admissionContext?.ui.notify(message, "info"),
+      }) } : {}),
       refreshModels: async () => providerModels(await resolveCatalog(), provider),
     });
   }
