@@ -27,3 +27,4 @@ jobs:
             | tar -xz -C /usr/local/bin rtk
           rtk --version
       - run: npm run test:fast-wire
+      - run: npm run verify:package

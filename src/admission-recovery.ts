@@ -3,7 +3,6 @@ import {
   lazyStream,
   type Api, type AssistantMessageEvent, type Context, type Model, type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import { streamSimple } from "@earendil-works/pi-ai/api/openai-completions";
 import { admissionDelay, admissionMessage, admissionResponse } from "./admission-evidence.ts";
 
 export interface AdmissionRecovery {
@@ -22,9 +21,14 @@ export function supportsCompactionRecovery(version: string): boolean {
   return major > 0 || minor > 85 || (minor === 85 && patch >= 1);
 }
 
+// The caller supplies Pi's host-resolved transport. This type import is erased;
+// this module never resolves a peer package's API subpath at runtime.
+type StreamSimple = typeof import("@earendil-works/pi-ai/api/openai-completions").streamSimple;
+
 export function admissionStream(
   model: Model<Api>, context: Context, options: SimpleStreamOptions | undefined,
   recovery: AdmissionRecovery,
+  streamSimple: StreamSimple,
 ) {
   if (!options?.signal || !recovery.enabled()) {
     return streamSimple(model as Model<"openai-completions">, context, options);

@@ -14,8 +14,8 @@ const calls = [];
 const server = createServer(async (request, response) => {
   if (request.method === 'GET' && request.url === '/v1/models') {
     response.setHeader('content-type', 'application/json');
-    response.end(JSON.stringify({ data: ['fornace-max', 'fornace-fast'].map(id => ({
-      id, context_window: 1100000, max_output_tokens: 16384,
+    response.end(JSON.stringify({ data: ['fornace-max', 'max', 'fornace-fast'].map(id => ({
+      id, mode: 'chat', context_window: 1100000, max_output_tokens: 16384,
     })) }));
     return;
   }
@@ -68,6 +68,7 @@ async function turn(id) {
       child.once('exit', resolve);
     });
     assert.equal(code, 0, output);
+    assert.ok(!output.includes('[pi-mantice]'), output);
     assert.ok(output.includes('fixture OK'), output);
   } finally {
     clearTimeout(timeout);

@@ -17,10 +17,10 @@ import {
   createProvider,
   envApiKeyAuth,
   isRetryableAssistantError,
-  lazyApi,
   type Model,
   type ProviderStreams,
 } from "@earendil-works/pi-ai";
+import { openAICompletionsApi, openAIResponsesApi } from "@earendil-works/pi-ai/compat";
 import {
   PROVIDERS,
   assertFornaceMaxCapacity,
@@ -85,8 +85,10 @@ async function resolveCatalog(): Promise<CatalogRow[]> {
   return catalogPromise;
 }
 
-const COMPLETIONS_API = lazyApi(() => import("@earendil-works/pi-ai/api/openai-completions"));
-const RESPONSES_API = lazyApi(() => import("@earendil-works/pi-ai/api/openai-responses"));
+// Pi's extension loader aliases the root package to its bundled compat exports.
+// Let the bundled factories resolve their own lazy modules inside that package.
+const COMPLETIONS_API = openAICompletionsApi();
+const RESPONSES_API = openAIResponsesApi();
 
 function providerModels(rows: CatalogRow[], provider: ProviderId) {
   const warn = (message: string) => {
@@ -133,7 +135,7 @@ export default async function register(api: ExtensionAPI) {
           projectTrusted: admissionContext.isProjectTrusted(),
         }).getRetrySettings().enabled,
         notify: (message) => admissionContext?.ui.notify(message, "info"),
-      }),
+      }, COMPLETIONS_API.streamSimple),
     } satisfies ProviderStreams : COMPLETIONS_API;
     api.registerProvider(createProvider<"openai-completions" | "openai-responses">({
       id: provider,
