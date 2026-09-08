@@ -37,5 +37,3 @@ jobs:
       - name: Recheck source immediately before publishing
         run: node .github/scripts/check-release.mjs
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: none
