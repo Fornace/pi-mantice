@@ -93,15 +93,50 @@ Fresh Pi processes used normal global package auto-discovery:
 - A byte copy of the reported session resumes with Astra and 422 active messages.
   No prompt was submitted to that copy. The original session SHA-256 remained
   `ec2d4a1360b30915eaee681a8df0d64823f68bbc933c838c57fda3788b177d09`.
-- Production routing and the Pi runtime installation were unchanged.
+- This audit made no production routing or Pi runtime installation changes.
 
 Local raw receipts are under `/tmp/pi-mantice-load-audit/`:
 revision wire logs, `fixed-outcomes.json`, `fixed-calls.json`, and
 `live-outcomes.json`. They are disposable evidence, not runtime dependencies.
 
-Version 1.1.1 is prepared for the existing main-bound tag publishing workflow.
-Publication, installed-artifact verification and running-session uptake remain
-separate from these pre-release measurements.
+## Release verification
+
+- [PR 3](https://github.com/Fornace/pi-mantice/pull/3) merged as
+  `81b8e5b4a853a8242d30a3103a6c56c9b357f632`.
+- [PR CI](https://github.com/Fornace/pi-mantice/actions/runs/34243512503),
+  [main CI](https://github.com/Fornace/pi-mantice/actions/runs/34243690920), and
+  [v1.1.1 publishing](https://github.com/Fornace/pi-mantice/actions/runs/34243698780)
+  all succeeded. The CI toolchain uses Node 24.
+- npm `pi-mantice@1.1.1` reports that exact `gitHead`. Its fetched tarball matches
+  `sha512-mH9z3Ba7tgley6s3CqtYVrSvTf5pO0RxPB7/KQpEGCWU0AujuTb/MiXOeNlbagGK4MMc6sz10nr5KW9ckun+Gg==`.
+- npm's SLSA provenance names the same source commit, tag, publishing workflow,
+  tarball digest and workflow invocation. Its transparency-log index is
+  `2759447015`; the npm publication attestation index is `2759447876`.
+- Both existing wire checks pass from the registry tarball outside the checkout.
+- `pi update npm:pi-mantice` installed the release through the standard updater.
+  All 32 shipped files match both the registry tarball and committed source.
+- Fresh installed-process verification again passes Chat Completions, Responses,
+  and one Bash tool-result roundtrip. The installed admission exercise waits
+  56,711 ms before its single byte-identical retry; cancellation takes 27 ms.
+  All six terminal cases and both provider aliases pass again.
+- A second copied-session resume reports 491 active messages. The original hash
+  is unchanged across that individual probe; the real session continued
+  elsewhere between the two probes. Neither probe submits a prompt to it.
+
+The initial whole-file settings-hash assertion detected a concurrent edit from
+another Pi session at 15:18:26 UTC: defaults changed to `fornace` /
+`fornace-reasoning`, scoped to `fornace/fornace-*`. Reversing that recorded text
+replacement in memory reproduces the complete pre-update file hash. This
+accounts for the full difference; no settings were restored or rewritten by
+this audit. The package source remains `npm:pi-mantice`.
+
+The shared npm installation reported seven audit advisories and blocked install
+scripts in other packages. The update reported one package changed. No unrelated
+dependency upgrade, script approval or `npm audit fix` was performed.
+
+An independent read-only review found no remaining code defect. This proves
+fresh-process adoption on this machine; existing sibling processes were not
+reloaded or restarted.
 
 ## Sources
 
