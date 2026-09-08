@@ -21,4 +21,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:session-wire
-      - run: npm run test:compaction-wire
+      - name: Install rtk
+        run: |
+          curl -sSL https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-unknown-linux-musl.tar.gz \
+            | tar -xz -C /usr/local/bin rtk
+          rtk --version
+      - run: npm run test:fast-wire

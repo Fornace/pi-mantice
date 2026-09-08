@@ -3,12 +3,12 @@
 // Registers the mantice/fornace providers from the authenticated live
 // /v1/models catalog (snapshot fallback, logged loudly), derives Pi model
 // metadata from M0 capability fields (legacy literal tier for older
-// gateways), compacts with the flash class chain, canonicalizes context
-// overflow errors so Pi's auto-compaction recovers, and reports which
-// backend model actually served each route.
+// gateways), splits compaction into a mechanical stage (/fast session) and
+// Pi-native AI compaction on pruned input, canonicalizes context overflow
+// errors so Pi's auto-compaction recovers, and reports which backend model
+// actually served each route.
 
 import { readFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -32,11 +32,13 @@ import {
   type ProviderId,
 } from "../src/catalog.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
-import { pruneSummaryToolResults, PRUNING_CONTEXT } from "../src/summary-pruning.ts";
-import { registerSessionIdentity } from "../src/session-identity.ts";
+import { buildMechanicalDigest, fileListsOf, MECHANICAL_DIGEST_VERSION } from "../src/mechanical-compaction.ts";
+import { createMechanicalGate, registerFastCommands, type CompactionStats } from "../src/fast-commands.ts";
 import { registerRtk } from "../src/rtk.ts";
-import { serializeSummaryHistory } from "../src/summary-serialization.ts";
-import { registerFastCommands } from "../src/fast-commands.ts";
+import { registerRtkTools } from "../src/rtk-tools.ts";
+import { registerSessionIdentity } from "../src/session-identity.ts";
+import { pruneSummaryToolResults } from "../src/summary-pruning.ts";
+import { supportsCompactionRecovery } from "../src/admission-recovery.ts";
 
 const COMPAT = {
   supportsDeveloperRole: false,
@@ -106,6 +108,7 @@ export default async function register(api: ExtensionAPI) {
   const admission = supportsCompactionRecovery(VERSION)
     ? await import("../src/admission-recovery.ts") : undefined;
   const rtk = registerRtk(api);
+  await registerRtkTools(api);
   let rows: CatalogRow[];
   try {
     rows = await resolveCatalog();
@@ -151,8 +154,12 @@ export default async function register(api: ExtensionAPI) {
     }));
   }
 
+  const mechanicalGate = createMechanicalGate();
+  const compactionStats: CompactionStats = {};
   const fast = registerFastCommands(api, {
     resetRtk: rtk.reset,
+    gate: mechanicalGate,
+    stats: compactionStats,
   });
   const overflow = createOverflowHandler([...PROVIDERS]);
   let responseWatcher: ((message: {
@@ -180,22 +187,55 @@ export default async function register(api: ExtensionAPI) {
   });
 
   api.on("session_before_compact", async (event, ctx) => {
-    // Mechanical pruning first. Pi's native ai-assisted compaction will
-    // then receive the stripped payload and remains fast.
+    // Stage 1, always: aggressive mechanical pruning of the summarizer's copy.
+    // Original session entries are untouched and remain recoverable.
     const history = ctx.sessionManager.getBranch().flatMap(sessionEntryToContextMessages);
-    const { messages, prunedMessages } = pruneSummaryToolResults(event.preparation.messagesToSummarize, history);
-    
-    if (prunedMessages > 0) {
-      event.preparation.messagesToSummarize.length = 0;
-      event.preparation.messagesToSummarize.push(...messages as any);
-      
-      // Inject pruning context string so the native ai-assisted model knows
-      // how to recover what was pruned if needed.
-      if (!event.customInstructions?.includes(PRUNING_CONTEXT)) {
-        event.customInstructions = event.customInstructions
-          ? `${event.customInstructions}\n\n${PRUNING_CONTEXT}`
-          : PRUNING_CONTEXT;
-      }
+    const preparation = event.preparation;
+    const pruned = pruneSummaryToolResults(preparation.messagesToSummarize, history);
+    const prunedPrefix = pruneSummaryToolResults(preparation.turnPrefixMessages ?? [], history);
+
+    // /fast session: replace the span with the mechanical digest directly.
+    // Zero model calls; the digest is deterministic and byte-bounded.
+    if (mechanicalGate.consume(ctx.sessionManager.getSessionId())) {
+      const fileLists = fileListsOf(preparation.fileOps);
+      const digest = buildMechanicalDigest({
+        messages: pruned.messages,
+        turnPrefixMessages: prunedPrefix.messages,
+        previousSummary: preparation.previousSummary,
+        focus: event.customInstructions,
+        readFiles: fileLists.readFiles,
+        modifiedFiles: fileLists.modifiedFiles,
+      });
+      compactionStats.tokensBefore = preparation.tokensBefore;
+      compactionStats.digestBytes = digest.bytes;
+      compactionStats.removedMessages = digest.removedMessages;
+      compactionStats.prunedMessages = pruned.prunedMessages;
+      return {
+        compaction: {
+          summary: digest.summary,
+          firstKeptEntryId: preparation.firstKeptEntryId,
+          tokensBefore: preparation.tokensBefore,
+          details: {
+            mechanical: true,
+            version: MECHANICAL_DIGEST_VERSION,
+            removedMessages: digest.removedMessages,
+            digestBytes: digest.bytes,
+            userMessages: digest.userMessages,
+          },
+        },
+      };
+    }
+
+    // Stage 2 stays Pi native: hand Pi's AI summarizer the pruned payload.
+    // Note: Pi 0.85.1 does not read back event.customInstructions mutations, so
+    // the pruned messages carry their own recovery markers instead.
+    for (const [target, source] of [
+      [preparation.messagesToSummarize, pruned.messages],
+      [preparation.turnPrefixMessages, prunedPrefix.messages],
+    ] as [any[], unknown[]]) {
+      if (!source.length) continue;
+      target.length = 0;
+      target.push(...source);
     }
     return undefined;
   });

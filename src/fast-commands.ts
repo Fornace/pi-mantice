@@ -3,21 +3,48 @@ import { fastPreview, fastStatus } from "./fast-inspection.ts";
 
 const SUMMARY_CARRY_BYTES = 128_000;
 
+export interface MechanicalGate {
+  /** Arm mechanical stage for one session; consumed by the next compaction. */
+  arm: (sessionId: string) => void;
+  /** Consume the armed state; true exactly once per arm(). */
+  consume: (sessionId: string) => boolean;
+}
+
+export function createMechanicalGate(): MechanicalGate {
+  const armed = new Set<string>();
+  return {
+    arm: id => armed.add(id),
+    consume: id => armed.delete(id),
+  };
+}
+
+export interface CompactionStats {
+  tokensBefore?: number;
+  digestBytes?: number;
+  removedMessages?: number;
+  prunedMessages?: number;
+}
+
 const COMMANDS = [
-  { value: "session", label: "session [focus]", description: "Compact now with Pi native compaction" },
+  { value: "session", label: "session [focus]", description: "Mechanical compaction: RTK-style digest, zero model calls" },
   { value: "preview", label: "preview", description: "Estimate pruning savings; no model call" },
   { value: "status", label: "status", description: "Context and model status" },
   { value: "rtk", label: "rtk", description: "Check RTK and restore native integration" },
   { value: "help", label: "help", description: "Show these commands" },
 ];
-const HELP = COMMANDS.map(command => `/fast ${command.label} — ${command.description}`).join("\n");
+const HELP = [
+  ...COMMANDS.map(command => `/fast ${command.label} — ${command.description}`),
+  "/compact — stage two: Pi native AI-assisted compaction of the pruned context",
+].join("\n");
 
 export function registerFastCommands(api: ExtensionAPI, options: {
   resetRtk: () => void;
+  gate: MechanicalGate;
+  stats: CompactionStats;
 }): { isCompacting: (sessionId: string) => boolean } {
   const running = new Set<string>();
   api.registerCommand("fast", {
-    description: "Mantice: session compaction, pruning preview, status and RTK",
+    description: "Mantice: mechanical session compaction, pruning preview, status and RTK",
     getArgumentCompletions: prefix => {
       const query = prefix.trimStart().toLowerCase();
       return COMMANDS.filter(command => command.value.startsWith(query));
@@ -40,7 +67,7 @@ export function registerFastCommands(api: ExtensionAPI, options: {
         }
         if (command === "rtk") { await checkRtk(api, ctx, options.resetRtk); return; }
         const id = ctx.sessionManager.getSessionId();
-        if (running.has(id)) { ctx.ui.notify("Native compaction is already running.", "info"); return; }
+        if (running.has(id)) { ctx.ui.notify("Mechanical compaction is already running.", "info"); return; }
         if (!ctx.isIdle() || ctx.hasPendingMessages()) {
           ctx.ui.notify("Finish or cancel the current turn and queued messages, then run /fast session.", "warning"); return;
         }
@@ -48,16 +75,32 @@ export function registerFastCommands(api: ExtensionAPI, options: {
           ctx.ui.notify("Compaction focus is too long.", "warning"); return;
         }
         running.add(id);
-        ctx.ui.notify("Native compaction started. Original history remains recoverable.", "info");
+        const started = Date.now();
+        options.stats.tokensBefore = undefined;
+        options.stats.digestBytes = undefined;
+        options.stats.removedMessages = undefined;
+        options.stats.prunedMessages = undefined;
+        options.gate.arm(id);
+        ctx.ui.notify("Mechanical compaction started. Zero model calls; original history remains recoverable.", "info");
         try {
           ctx.compact({
             ...(focus ? { customInstructions: focus } : {}),
-            onComplete: () => { running.delete(id); ctx.ui.notify("Native compaction complete.", "info"); },
+            onComplete: () => {
+              running.delete(id);
+              const tokens = options.stats.tokensBefore;
+              const digest = options.stats.digestBytes;
+              const reduction = tokens && digest
+                ? ` · context span reduced ~${Math.max(0, 100 - Math.round((digest / 4 / tokens) * 100))}%`
+                : "";
+              ctx.ui.notify(`Mechanical compaction complete in ${((Date.now() - started) / 1000).toFixed(1)}s · ` +
+                `${options.stats.removedMessages ?? 0} messages replaced by a ` +
+                `${((digest ?? 0) / 1024).toFixed(1)} KiB digest · zero model calls${reduction}.`, "info");
+            },
             onError: error => {
               running.delete(id);
               if (error.message === "Nothing to compact (session too small)" || error.message === "Already compacted") {
                 ctx.ui.notify("Session is already compact; nothing to do.", "info");
-              } else ctx.ui.notify(`Native compaction stopped: ${error.message}`, "warning");
+              } else ctx.ui.notify(`Mechanical compaction stopped: ${error.message}`, "warning");
             },
           });
         } catch (error) { running.delete(id); throw error; }

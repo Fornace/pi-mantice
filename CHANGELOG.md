@@ -1,3 +1,15 @@
+## 1.1.0 (2026-09-08)
+
+- Two-stage compaction: `/fast session` now performs stage 1 mechanically
+  (deterministic bounded digest, zero model calls, millisecond scale) and
+  `/compact` remains Pi native, receiving the pruned payload. The flash-chain
+  summarizer, chunking and part checkpoints were removed with it.
+- New `fast_read` and `fast_write` RTK tools for cheap filtered file reads
+  and write receipts.
+- Fixed a dead customInstructions injection: Pi 0.85.1 never read back
+  `session_before_compact` mutations, so pruning markers now live in the
+  pruned messages themselves.
+
 ## 1.0.1 (2026-09-03)
 
 - CI: declared `@types/node` as a dev dependency so `npm ci` typechecks on a

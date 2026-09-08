@@ -14,6 +14,14 @@ export interface AdmissionRecovery {
   jitter?: () => number;
 }
 
+// Pi 0.85.1 fixes RPC abort propagation to the compaction controller.
+// Unknown/prerelease versions are not evidence that cancellation is safe.
+export function supportsCompactionRecovery(version: string): boolean {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) return false;
+  const [major, minor, patch] = version.split(".").map(Number);
+  return major > 0 || minor > 85 || (minor === 85 && patch >= 1);
+}
+
 export function admissionStream(
   model: Model<Api>, context: Context, options: SimpleStreamOptions | undefined,
   recovery: AdmissionRecovery,

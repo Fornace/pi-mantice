@@ -1,8 +1,9 @@
 # pi-mantice
 
 Mantice gateway integration for [Pi](https://github.com/badlogic/pi-mono):
-live model catalog with capability fields, class-aware metadata, flash-class
-compaction, canonical overflow recovery, and first-install setup.
+live model catalog with capability fields, class-aware metadata, two-stage
+fast compaction (mechanical pruning plus Pi native AI summaries), RTK fast
+file tools, canonical overflow recovery, and first-install setup.
 
 Absorbs and replaces `fornace-pi-models`.
 
@@ -18,29 +19,23 @@ Absorbs and replaces `fornace-pi-models`.
   registration aborts with the offending row named. A stale or missing
   client-side window silently strangles compaction (see the 2026-09-03
   incident notes in `docs/PLAN.md`).
-- Compaction summarizes with the flash class route (`fornace-flash`),
-  falls back to `fornace-fast`, and never automatically spends the session's
-  max-class model on summarization. Usage is recorded into session totals.
-  Transient summary failures use Pi's bounded retry helper and persisted retry
-  settings before class fallback. Cancellation interrupts backoff; recognized
-  policy rejections preserve the transcript without retry or class fallback.
-  On stable Pi >= 0.85.1 with retries enabled, automatic compaction keeps waiting
-  through transient class-route outages, retrying eligible routes every 30–60s
-  until recovery or cancellation. Permanent failures are not repeatedly called.
-  Older runtimes retain bounded recovery because their RPC abort does not cancel
-  compaction reliably. Manual compaction can use Pi's default fallback only when
-  no pruning or chunking occurred.
-- Before compaction, preserve all user messages and the last two user-led rounds.
-  Aggressively prune older non-user history: strip reasoning and tool payloads,
-  retain compact tool-call references and paths, bound older assistant text, and
-  collapse exact repeated replies. Original session history remains recoverable.
-  Recent tool text bypasses Pi's default serializer truncation. Oversized input
-  is chunked; completed parts are checkpointed for interrupted compactions.
-- Native [RTK](https://github.com/rtk-ai/rtk) integration rewrites supported Bash
-  commands for Mantice sessions to return compact output. Install the `rtk`
-  binary on PATH (`brew install rtk` on macOS); no separate Pi RTK extension is
-  needed. An existing RTK extension can coexist. `RTK_DISABLED=1` opts out;
-  missing RTK preserves normal command execution and history pruning.
+- Two-stage compaction. Stage 1 (`/fast session`) is aggressive mechanical
+  pruning: the summarized span is replaced by a deterministic, byte-bounded
+  digest (default ceiling 64 KiB) in milliseconds, with zero model calls. All
+  user messages are retained as chronological excerpts (progressive caps
+  16 KiB to 128 B under budget pressure); older reasoning and tool payloads
+  become references; assistant text becomes deduplicated excerpts. Stage 2
+  stays Pi native: `/compact` (manual or auto) summarizes the pruned payload
+  with the session model, so the AI summary never sees unpruned bulk.
+  Original session history always remains recoverable in the JSONL.
+- Native [RTK](https://github.com/rtk-ai/rtk) integration: supported Bash
+  commands are rewritten for Mantice sessions to return compact output, and
+  the `fast_read` / `fast_write` tools expose RTK's filtered read and
+  heuristic smart summary as first-class tools for cheap file re-reads after
+  compaction. Install the `rtk` binary on PATH (`brew install rtk` on macOS);
+  no separate Pi RTK extension is needed. An existing RTK extension can
+  coexist. `RTK_DISABLED=1` opts out of command rewriting; missing RTK
+  preserves normal command execution and history pruning.
 - Overflow recovery: upstream context-miss wordings (including Z.ai code
   1261) are canonicalized to `context_length_exceeded` so Pi auto-compacts
   and retries once. Rate limits and route-availability errors are never
@@ -78,18 +73,21 @@ environment. Remove any hand-written `mantice`/`fornace` blocks from
 
 | Command | Action |
 | --- | --- |
-| `/fast session [focus]` | Compact now through flash/fast, optionally focusing the summary, e.g. `/fast session deployment` |
-| `/fast preview` | Estimate pruning savings and chunk count without a model call |
-| `/fast status` | Show context usage, selected model, summarizers and saved compaction progress |
+| `/fast session [focus]` | Mechanical compaction now: replace the summarized span with a bounded digest, zero model calls, optionally carrying a focus line, e.g. `/fast session deployment` |
+| `/fast preview` | Estimate pruning savings without a model call |
+| `/fast status` | Show context usage, selected model, stage status and last compaction |
 | `/fast rtk` | Check the installed RTK binary and restore native integration after installation |
+| `/compact` | Stage two: Pi native AI-assisted compaction of the pruned context |
 
-Session compaction preserves the original history and uses the same aggressive
-pruning policy. It requires an idle Mantice session, does not resume its task,
-and never falls through to the session's max model. Empty or already compact
-sessions return a simple notice. Preview measures serialized active-context
-bytes; the actual summarization span also depends on Pi's retained window.
-Status, preview, help and RTK checks do not call a model. `RTK_DISABLED=1`
-remains respected by the RTK check.
+Mechanical compaction preserves the original history in the session JSONL and
+makes no LLM request; the digest is bounded (64 KiB ceiling), deterministic and
+carries every user message as an excerpt. It requires an idle session without
+queued messages and does not resume its task. Empty or already compact sessions
+return a simple notice. `/compact` runs Pi's own summarizer on the pruned
+payload. Preview measures serialized active-context bytes; the actual
+summarization span also depends on Pi's retained window. Status, preview, help
+and RTK checks do not call a model. `RTK_DISABLED=1` remains respected by the
+RTK check.
 
 ## Setup for your own gateway
 
@@ -115,8 +113,11 @@ npm run audit     # spawn a real Pi and compare its registry to the live catalog
 ## Layout
 
 - `src/catalog.ts` live/snapshot catalog → Pi model entries (both tiers)
-- `src/classes.ts` class policy: max/reasoning/fast/flash, compaction chain
-- `src/summarize.ts` `session_before_compact` flash-chain summarization
+- `src/classes.ts` class policy: max/reasoning/fast/flash
+- `src/summary-pruning.ts` mechanical pruning of the summarizer's copy
+- `src/mechanical-compaction.ts` bounded digest builder (stage 1)
+- `src/fast-commands.ts` `/fast` commands and the mechanical gate
+- `src/rtk.ts`, `src/rtk-tools.ts` RTK command rewriting and fast tools
 - `src/overflow.ts` canonical overflow mapping + response-model notices
 - `src/frontier.ts` pi-frontier join used by setup and annotations
 - `extensions/mantice-models.ts` Pi wiring (the only extension file)
