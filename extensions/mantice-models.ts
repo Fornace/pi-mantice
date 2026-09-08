@@ -18,6 +18,7 @@ import {
   envApiKeyAuth,
   isRetryableAssistantError,
   lazyApi,
+  type Model,
   type ProviderStreams,
 } from "@earendil-works/pi-ai";
 import {
@@ -119,6 +120,14 @@ export default async function register(api: ExtensionAPI) {
   }
 
   for (const provider of PROVIDERS) {
+    const runtimeModels = (catalog: CatalogRow[]): Model<
+      "openai-completions" | "openai-responses"
+    >[] => providerModels(catalog, provider).map((model) => ({
+      ...model,
+      provider,
+      baseUrl: baseUrlFromEnv(),
+      api: model.api ?? "openai-completions",
+    })) as Model<"openai-completions" | "openai-responses">[];
     const completions = admission ? {
       ...COMPLETIONS_API,
       streamSimple: (model, context, options) => admission.admissionStream(model, context, options, {
@@ -128,7 +137,7 @@ export default async function register(api: ExtensionAPI) {
         notify: (message) => admissionContext?.ui.notify(message, "info"),
       }),
     } satisfies ProviderStreams : COMPLETIONS_API;
-    api.registerProvider(createProvider({
+    api.registerProvider(createProvider<"openai-completions" | "openai-responses">({
       id: provider,
       name: provider === "mantice" ? "Mantice" : "Fornace",
       baseUrl: baseUrlFromEnv(),
@@ -138,12 +147,8 @@ export default async function register(api: ExtensionAPI) {
           [provider === "mantice" ? "MANTICE_API_KEY" : "FORNACE_LLM_API_KEY"],
         ),
       },
-      models: providerModels(rows, provider).map((model) => ({
-        ...model,
-        provider,
-        baseUrl: baseUrlFromEnv(),
-        api: model.api ?? "openai-completions",
-      })),
+      models: runtimeModels(rows),
+      fetchModels: async () => runtimeModels(await resolveCatalog()),
       api: {
         "openai-completions": completions,
         "openai-responses": RESPONSES_API,
