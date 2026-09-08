@@ -133,7 +133,7 @@ export default async function register(api: ExtensionAPI) {
           projectTrusted: admissionContext.isProjectTrusted(),
         }).getRetrySettings().enabled,
         notify: (message) => admissionContext?.ui.notify(message, "info"),
-      }),
+      }, COMPLETIONS_API.streamSimple),
     } satisfies ProviderStreams : COMPLETIONS_API;
     api.registerProvider(createProvider<"openai-completions" | "openai-responses">({
       id: provider,
