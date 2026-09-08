@@ -34,6 +34,8 @@ test('mechanical digest retains user text, strips tool payloads, stays under bud
   assert.ok(digest.summary.includes('src/pay.ts'));
   assert.ok(digest.summary.includes('src/flows.ts'));
   assert.ok(digest.summary.includes(MECHANICAL_DIGEST_VERSION));
+  assert.ok(digest.summary.includes('Round conclusions'), 'round conclusions section missing');
+  assert.ok(digest.summary.includes('old assistant reply about payment flows'), 'round conclusion excerpt missing');
   assert.equal(digest.userMessages, 2);
   assert.ok(digest.toolCalls >= 1);
 });

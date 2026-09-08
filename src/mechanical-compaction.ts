@@ -12,6 +12,7 @@ export const DIGEST_BUDGET_BYTES = 64_000;
 /** Progressive per-message caps for older user text (head+tail bytes). */
 const USER_CAP_STEPS = [16_384, 4_096, 1_024, 256, 128];
 const ASSISTANT_TEXT_BYTES = 512;
+const ROUND_CONCLUSION_BYTES = 2_048;
 const PREVIOUS_SUMMARY_BYTES = 24_000;
 const TOOL_INDEX_LINE_BYTES = 400;
 const FILE_LIST_MAX = 200;
@@ -71,17 +72,24 @@ function textOf(content: unknown): string {
 interface Classified {
   user: string[];
   assistant: string[];
+  roundConclusions: string[];
   toolCalls: { name: string; path?: string }[];
   counts: { user: number; assistant: number; toolResult: number; other: number };
 }
 
 function classify(messages: unknown[]): Classified {
-  const out: Classified = { user: [], assistant: [], toolCalls: [], counts: { user: 0, assistant: 0, toolResult: 0, other: 0 } };
+  const out: Classified = { user: [], assistant: [], roundConclusions: [], toolCalls: [], counts: { user: 0, assistant: 0, toolResult: 0, other: 0 } };
   const seenAssistant = new Set<string>();
+  let roundConclusion: string | null = null;
+  const flushRound = () => {
+    if (roundConclusion) out.roundConclusions.push(roundConclusion);
+    roundConclusion = null;
+  };
   for (const message of messages) {
     const value = record(message);
     if (!value) { out.counts.other++; continue; }
     if (value.role === "user") {
+      flushRound();
       const text = textOf(value.content).trim();
       if (text) { out.user.push(text); out.counts.user++; }
       continue;
@@ -90,7 +98,10 @@ function classify(messages: unknown[]): Classified {
     if (value.role === "assistant" && Array.isArray(value.content)) {
       out.counts.assistant++;
       const text = textOf(value.content).trim();
-      if (text && !seenAssistant.has(text)) { out.assistant.push(excerpt(text, ASSISTANT_TEXT_BYTES)); seenAssistant.add(text); }
+      if (text) {
+        if (!seenAssistant.has(text)) { out.assistant.push(excerpt(text, ASSISTANT_TEXT_BYTES)); seenAssistant.add(text); }
+        roundConclusion = excerpt(text, ROUND_CONCLUSION_BYTES);
+      }
       for (const block of value.content) {
         if (block?.type !== "toolCall") continue;
         const path = typeof block.arguments?.path === "string" ? block.arguments.path : undefined;
@@ -100,6 +111,7 @@ function classify(messages: unknown[]): Classified {
     }
     out.counts.other++;
   }
+  flushRound();
   return out;
 }
 
@@ -145,12 +157,14 @@ function buildDigest(input: MechanicalDigestInput, perMessageBytes: number, budg
   addWithinBudget(parts, input.previousSummary
     ? `<previous-summary>\n${excerpt(input.previousSummary, PREVIOUS_SUMMARY_BYTES)}\n</previous-summary>` : "", budget);
   addWithinBudget(parts, `## User messages (chronological)\n${renderUserSection(classified.user, perMessageBytes)}`, budget);
+  addWithinBudget(parts, classified.roundConclusions.length
+    ? `## Round conclusions (final assistant text of each user round)\n${classified.roundConclusions.join("\n\n")}` : "", budget);
   addWithinBudget(parts, classified.toolCalls.length
     ? `## Tool-call index\n${classified.toolCalls.map(toolCallLine).join(" · ")}` : "", budget);
   addWithinBudget(parts, fileList("read-files", input.readFiles), budget);
   addWithinBudget(parts, fileList("modified-files", input.modifiedFiles), budget);
   addWithinBudget(parts, classified.assistant.length
-    ? `## Assistant text (deduplicated excerpts)\n${classified.assistant.join("\n\n")}` : "", budget);
+    ? `## Older assistant text (deduplicated excerpts, oldest may be cut)\n${classified.assistant.join("\n\n")}` : "", budget);
   addWithinBudget(parts, recovery, budget);
   return parts.join("\n\n");
 }
