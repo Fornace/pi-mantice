@@ -1,18 +1,18 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { fastPreview, fastStatus } from "./fast-inspection.ts";
-import { SUMMARY_CARRY_BYTES } from "./summary-chunks.ts";
+
+const SUMMARY_CARRY_BYTES = 128_000;
 
 const COMMANDS = [
-  { value: "session", label: "session [focus]", description: "Compact now with Mantice flash/fast" },
+  { value: "session", label: "session [focus]", description: "Compact now with Pi native compaction" },
   { value: "preview", label: "preview", description: "Estimate pruning savings; no model call" },
-  { value: "status", label: "status", description: "Context, model and saved compaction progress" },
+  { value: "status", label: "status", description: "Context and model status" },
   { value: "rtk", label: "rtk", description: "Check RTK and restore native integration" },
   { value: "help", label: "help", description: "Show these commands" },
 ];
 const HELP = COMMANDS.map(command => `/fast ${command.label} — ${command.description}`).join("\n");
 
 export function registerFastCommands(api: ExtensionAPI, options: {
-  modelIds: () => string[];
   resetRtk: () => void;
 }): { isCompacting: (sessionId: string) => boolean } {
   const running = new Set<string>();
@@ -35,18 +35,12 @@ export function registerFastCommands(api: ExtensionAPI, options: {
       try {
         if (command === "preview") { ctx.ui.notify(fastPreview(ctx), "info"); return; }
         if (command === "status") {
-          ctx.ui.notify(fastStatus(ctx, running.has(ctx.sessionManager.getSessionId()), options.modelIds()), "info");
+          ctx.ui.notify(fastStatus(ctx, running.has(ctx.sessionManager.getSessionId())), "info");
           return;
         }
         if (command === "rtk") { await checkRtk(api, ctx, options.resetRtk); return; }
-        if (ctx.model?.provider !== "mantice" && ctx.model?.provider !== "fornace") {
-          ctx.ui.notify("Select a Mantice model before /fast session.", "warning"); return;
-        }
-        if (!options.modelIds().length) {
-          ctx.ui.notify("Mantice flash/fast summarizers are unavailable. /fast status shows the current catalog.", "warning"); return;
-        }
         const id = ctx.sessionManager.getSessionId();
-        if (running.has(id)) { ctx.ui.notify("Fast compaction is already running.", "info"); return; }
+        if (running.has(id)) { ctx.ui.notify("Native compaction is already running.", "info"); return; }
         if (!ctx.isIdle() || ctx.hasPendingMessages()) {
           ctx.ui.notify("Finish or cancel the current turn and queued messages, then run /fast session.", "warning"); return;
         }
@@ -54,16 +48,16 @@ export function registerFastCommands(api: ExtensionAPI, options: {
           ctx.ui.notify("Compaction focus is too long.", "warning"); return;
         }
         running.add(id);
-        ctx.ui.notify("Fast compaction started. Original history remains recoverable.", "info");
+        ctx.ui.notify("Native compaction started. Original history remains recoverable.", "info");
         try {
           ctx.compact({
             ...(focus ? { customInstructions: focus } : {}),
-            onComplete: () => { running.delete(id); ctx.ui.notify("Fast compaction complete.", "info"); },
+            onComplete: () => { running.delete(id); ctx.ui.notify("Native compaction complete.", "info"); },
             onError: error => {
               running.delete(id);
               if (error.message === "Nothing to compact (session too small)" || error.message === "Already compacted") {
                 ctx.ui.notify("Session is already compact; nothing to do.", "info");
-              } else ctx.ui.notify(`Fast compaction stopped: ${error.message}`, "warning");
+              } else ctx.ui.notify(`Native compaction stopped: ${error.message}`, "warning");
             },
           });
         } catch (error) { running.delete(id); throw error; }

@@ -4,7 +4,6 @@
 // only: no enums, no namespaces).
 
 import type { TextClass } from "./classes.ts";
-import { classOf } from "./classes.ts";
 
 export interface CatalogRow {
   id: string;
@@ -259,26 +258,6 @@ export function buildProviderModels(
   return models;
 }
 
-// Compaction candidates: the configured classes resolved to registered model
-// ids for this provider. Aliases (mantice provider) are preferred over group
-// ids because they survive group renames.
-export function compactionModelIds(rows: CatalogRow[], chain: TextClass[]): string[] {
-  const wanted = new Set(chain);
-  const found: { class: TextClass; id: string; isAlias: boolean }[] = [];
-  for (const row of rows) {
-    const klass = classOf(row);
-    if (klass && wanted.has(klass)) {
-      found.push({ class: klass, id: row.id, isAlias: isAliasRow(row) });
-    }
-  }
-  const ordered: string[] = [];
-  for (const klass of chain) {
-    const matches = found.filter((entry) => entry.class === klass);
-    const preferred = matches.find((entry) => entry.isAlias) ?? matches[0];
-    if (preferred) ordered.push(preferred.id);
-  }
-  return ordered;
-}
 
 export async function fetchCatalog(baseUrl: string, apiKey: string): Promise<CatalogRow[]> {
   const url = `${baseUrl.replace(/\/+$/, "")}/models`;

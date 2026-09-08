@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_CONTEXT_WINDOW, assertFornaceMaxCapacity, buildProviderModels,
-  compactionModelIds, hasCapabilities, isChatRow, parseCatalog,
+  hasCapabilities, isChatRow, parseCatalog,
 } from '../src/catalog.ts';
-import { COMPACTION_CHAIN, classOf } from '../src/classes.ts';
+import { classOf } from '../src/classes.ts';
 
 const capabilityRows = parseCatalog({
   data: [
@@ -100,9 +100,3 @@ test('class derivation prefers gateway field then literals', () => {
   assert.equal(classOf({ id: 'glm-custom' }), null);
 });
 
-test('compaction chain resolves alias ids in order', () => {
-  const ids = compactionModelIds(capabilityRows, COMPACTION_CHAIN);
-  assert.deepEqual(ids, ['flash']); // no fast-class row in fixture
-  const complete = capabilityRows.concat([{ id: 'fornace-fast', owned_by: 'routing', context_window: 400000, max_output_tokens: 128000, mode: 'chat', class: 'fast' }]);
-  assert.deepEqual(compactionModelIds(complete, COMPACTION_CHAIN), ['flash', 'fornace-fast']);
-});

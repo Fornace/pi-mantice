@@ -26,18 +26,13 @@ import {
   assertFornaceMaxCapacity,
   baseUrlFromEnv,
   buildProviderModels,
-  compactionModelIds,
   fetchCatalog,
   parseCatalog,
   type CatalogRow,
   type ProviderId,
 } from "../src/catalog.ts";
-import { COMPACTION_CHAIN, classOf } from "../src/classes.ts";
-import { compactWithClassChain } from "../src/summarize.ts";
-import { createSummaryCheckpointStore } from "../src/summary-checkpoint.ts";
-import { completeSummaryWithRetry } from "../src/summary-completion.ts";
-import { CompactionTransientError, supportsCompactionRecovery } from "../src/summary-recovery.ts";
 import { createOverflowHandler, createResponseModelWatcher } from "../src/overflow.ts";
+import { pruneSummaryToolResults, PRUNING_CONTEXT } from "../src/summary-pruning.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
 import { registerRtk } from "../src/rtk.ts";
 import { serializeSummaryHistory } from "../src/summary-serialization.ts";
@@ -157,7 +152,6 @@ export default async function register(api: ExtensionAPI) {
   }
 
   const fast = registerFastCommands(api, {
-    modelIds: () => compactionModelIds(rows.filter(row => classOf(row) !== null), COMPACTION_CHAIN),
     resetRtk: rtk.reset,
   });
   const overflow = createOverflowHandler([...PROVIDERS]);
@@ -186,44 +180,23 @@ export default async function register(api: ExtensionAPI) {
   });
 
   api.on("session_before_compact", async (event, ctx) => {
-    if (!rows.length) return undefined;
-    const modelIds = compactionModelIds(rows.filter((row) => classOf(row) !== null), COMPACTION_CHAIN);
-    if (!modelIds.length) return undefined;
-    const retry = SettingsManager.create(ctx.cwd, undefined, {
-      projectTrusted: ctx.isProjectTrusted(),
-    }).getRetrySettings();
-    return compactWithClassChain(event, {
-      chain: COMPACTION_CHAIN,
-      modelIds,
-      history: ctx.sessionManager.getBranch().flatMap(sessionEntryToContextMessages),
-      allowDefaultFallback: !fast.isCompacting(ctx.sessionManager.getSessionId()),
-      checkpoints: createSummaryCheckpointStore(ctx.sessionManager.getBranch(), (type, data) => api.appendEntry(type, data)),
-      recoverTransientFailures: retry.enabled && supportsCompactionRecovery(VERSION),
-      resolveModel: (id) => ctx.modelRegistry.find("mantice", id) ?? ctx.modelRegistry.find("fornace", id) ?? null,
-      complete: async (model, context, options) => {
-        const response = await completeSummaryWithRetry(() => ctx.modelRegistry.complete(
-          model as never,
-          context as never,
-          options as never,
-        ), retry, options.signal, (message) => ctx.ui.notify(message, "warning"));
-        // A nonempty length-stopped summary is still incomplete. Never commit
-        // it as replacement context; allow the compaction chain to recover.
-        if (response.stopReason !== "stop") {
-          if (retry.enabled && isRetryableAssistantError(response)) {
-            throw new CompactionTransientError(response.errorMessage || "Transient compaction failure");
-          }
-          const error = new Error(response.errorMessage || `Compaction ${response.stopReason}`);
-          if (response.stopReason === "aborted") error.name = "AbortError";
-          throw error;
-        }
-        const text = (response.content ?? [])
-          .flatMap((block) => (block.type === "text" ? [block.text] : []))
-          .join("\n");
-        return { text, usage: response.usage };
-      },
-      newSessionId: randomUUID,
-      conversationId: ctx.sessionManager.getSessionId(),
-      notify: (message, level = "info") => ctx.ui.notify(message, level),
-    }, serializeSummaryHistory);
+    // Mechanical pruning first. Pi's native ai-assisted compaction will
+    // then receive the stripped payload and remains fast.
+    const history = ctx.sessionManager.getBranch().flatMap(sessionEntryToContextMessages);
+    const { messages, prunedMessages } = pruneSummaryToolResults(event.preparation.messagesToSummarize, history);
+    
+    if (prunedMessages > 0) {
+      event.preparation.messagesToSummarize.length = 0;
+      event.preparation.messagesToSummarize.push(...messages as any);
+      
+      // Inject pruning context string so the native ai-assisted model knows
+      // how to recover what was pruned if needed.
+      if (!event.customInstructions?.includes(PRUNING_CONTEXT)) {
+        event.customInstructions = event.customInstructions
+          ? `${event.customInstructions}\n\n${PRUNING_CONTEXT}`
+          : PRUNING_CONTEXT;
+      }
+    }
+    return undefined;
   });
 }

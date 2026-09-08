@@ -5,10 +5,6 @@
 export const TEXT_CLASSES = ["max", "reasoning", "fast", "flash"] as const;
 export type TextClass = (typeof TEXT_CLASSES)[number];
 
-// Compaction never runs on the session's own class when a cheaper class is
-// reachable: flash first, fast as fallback, then hand the turn back to Pi.
-export const COMPACTION_CHAIN: TextClass[] = ["flash", "fast"];
-
 export const CLASS_ALIASES: Record<string, TextClass> = {
   "fornace-max": "max",
   "fornace-reasoning": "reasoning",
