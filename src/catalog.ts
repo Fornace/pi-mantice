@@ -28,8 +28,13 @@ export interface CatalogPayload {
 export interface PiModelEntry {
   id: string;
   name: string;
+  api?: "openai-responses";
   input: Array<"text" | "image">;
   reasoning: boolean;
+  thinkingLevelMap?: Partial<Record<
+    "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max",
+    string | null
+  >>;
   cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
   contextWindow: number;
   maxTokens: number;
@@ -89,6 +94,7 @@ const LEGACY_IMAGE_IDS = new Set([
 
 export const PRETTY_NAMES: Record<string, string> = {
   "fornace-max": "Fornace Max",
+  "fornace-astra": "Fornace Astra",
   "fornace-fast": "Fornace Fast",
   "fornace-flash": "Fornace Flash",
   "fornace-grok": "Fornace Grok",
@@ -224,12 +230,27 @@ export function buildProviderModels(
       typeof row.max_output_tokens === "number" && row.max_output_tokens > 0
         ? row.max_output_tokens
         : DEFAULT_MAX_TOKENS;
+    const astra = row.id === "fornace-astra";
     models.push({
       id: row.id,
       name: prettyName(row.id),
+      ...(astra ? {
+        api: "openai-responses" as const,
+        thinkingLevelMap: {
+          off: null,
+          minimal: null,
+          low: "low",
+          medium: "medium",
+          high: "high",
+          xhigh: "xhigh",
+          max: "max",
+        },
+      } : {}),
       reasoning: isReasoningRow(row, capability),
       input: inputOf(row, capability),
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      cost: astra
+        ? { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 }
+        : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
       contextWindow,
       maxTokens,
     });
