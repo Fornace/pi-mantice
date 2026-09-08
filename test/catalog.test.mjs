@@ -13,6 +13,9 @@ const capabilityRows = parseCatalog({
       supports_tools: true, thinking: { modes: ['enabled', 'disabled'], efforts: ['low', 'high', 'max'] } },
     { id: 'max', owned_by: 'alias:fornace-max', context_window: 1050000, max_output_tokens: 1048576,
       mode: 'chat', class: 'max' },
+    { id: 'fornace-astra', owned_by: 'routing', context_window: 1050000, max_output_tokens: 128000,
+      mode: 'chat', input_modalities: ['text', 'image'], output_modalities: ['text'], supports_tools: true,
+      thinking: { modes: ['enabled'], efforts: ['low', 'medium', 'high', 'xhigh', 'max'] } },
     { id: 'fornace-flash', owned_by: 'routing', context_window: 1000000, max_output_tokens: 65536,
       mode: 'chat', class: 'flash', thinking: { modes: ['enabled'], efforts: ['low'] } },
     { id: 'flash', owned_by: 'alias:fornace-flash', context_window: 1000000, max_output_tokens: 65536,
@@ -52,6 +55,13 @@ test('capability rows build exact Pi metadata from structured fields', () => {
     contextWindow: 1050000, maxTokens: 1048576,
   });
   assert.equal(models.find((m) => m.id === 'fornace-flash').reasoning, true);
+  assert.deepEqual(models.find((m) => m.id === 'fornace-astra'), {
+    id: 'fornace-astra', name: 'Fornace Astra', api: 'openai-responses',
+    reasoning: true, thinkingLevelMap: { off: null, minimal: null, low: 'low', medium: 'medium',
+      high: 'high', xhigh: 'xhigh', max: 'max' }, input: ['text', 'image'],
+    cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+    contextWindow: 1050000, maxTokens: 128000,
+  });
 });
 
 test('capability tier skips incomplete rows loudly, aborts only on max rows', () => {

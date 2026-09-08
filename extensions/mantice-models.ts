@@ -13,10 +13,15 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { sessionEntryToContextMessages, SettingsManager, VERSION } from "@earendil-works/pi-coding-agent";
-import { isRetryableAssistantError } from "@earendil-works/pi-ai";
+import {
+  createProvider,
+  envApiKeyAuth,
+  isRetryableAssistantError,
+  lazyApi,
+  type ProviderStreams,
+} from "@earendil-works/pi-ai";
 import {
   PROVIDERS,
-  PROVIDER_API_KEYS,
   assertFornaceMaxCapacity,
   baseUrlFromEnv,
   buildProviderModels,
@@ -82,13 +87,19 @@ async function resolveCatalog(): Promise<CatalogRow[]> {
   return catalogPromise;
 }
 
+const COMPLETIONS_API = lazyApi(() => import("@earendil-works/pi-ai/api/openai-completions"));
+const RESPONSES_API = lazyApi(() => import("@earendil-works/pi-ai/api/openai-responses"));
+
 function providerModels(rows: CatalogRow[], provider: ProviderId) {
   const warn = (message: string) => {
     if (loggedWarnings.has(message)) return;
     loggedWarnings.add(message);
     console.error(message);
   };
-  return buildProviderModels(rows, provider, warn).map((model) => ({ ...model, compat: COMPAT }));
+  return buildProviderModels(rows, provider, warn).map((model) => ({
+    ...model,
+    ...(model.api === "openai-responses" ? {} : { compat: COMPAT }),
+  }));
 }
 
 export default async function register(api: ExtensionAPI) {
@@ -108,19 +119,36 @@ export default async function register(api: ExtensionAPI) {
   }
 
   for (const provider of PROVIDERS) {
-    api.registerProvider(provider, {
-      baseUrl: baseUrlFromEnv(),
-      api: "openai-completions",
-      apiKey: PROVIDER_API_KEYS[provider],
-      models: providerModels(rows, provider),
-      ...(admission ? { streamSimple: (model, context, options) => admission.admissionStream(model, context, options, {
+    const completions = admission ? {
+      ...COMPLETIONS_API,
+      streamSimple: (model, context, options) => admission.admissionStream(model, context, options, {
         enabled: () => !!admissionContext && SettingsManager.create(admissionContext.cwd, undefined, {
           projectTrusted: admissionContext.isProjectTrusted(),
         }).getRetrySettings().enabled,
         notify: (message) => admissionContext?.ui.notify(message, "info"),
-      }) } : {}),
-      refreshModels: async () => providerModels(await resolveCatalog(), provider),
-    });
+      }),
+    } satisfies ProviderStreams : COMPLETIONS_API;
+    api.registerProvider(createProvider({
+      id: provider,
+      name: provider === "mantice" ? "Mantice" : "Fornace",
+      baseUrl: baseUrlFromEnv(),
+      auth: {
+        apiKey: envApiKeyAuth(
+          `${provider === "mantice" ? "Mantice" : "Fornace"} API key`,
+          [provider === "mantice" ? "MANTICE_API_KEY" : "FORNACE_LLM_API_KEY"],
+        ),
+      },
+      models: providerModels(rows, provider).map((model) => ({
+        ...model,
+        provider,
+        baseUrl: baseUrlFromEnv(),
+        api: model.api ?? "openai-completions",
+      })),
+      api: {
+        "openai-completions": completions,
+        "openai-responses": RESPONSES_API,
+      },
+    }));
   }
 
   const fast = registerFastCommands(api, {
