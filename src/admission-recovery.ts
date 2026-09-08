@@ -21,7 +21,8 @@ export function supportsCompactionRecovery(version: string): boolean {
   return major > 0 || minor > 85 || (minor === 85 && patch >= 1);
 }
 
-// Use a dynamic import type for the stream function to avoid jiti converting it to a failing require()
+// The caller supplies Pi's host-resolved transport. This type import is erased;
+// this module never resolves a peer package's API subpath at runtime.
 type StreamSimple = typeof import("@earendil-works/pi-ai/api/openai-completions").streamSimple;
 
 export function admissionStream(

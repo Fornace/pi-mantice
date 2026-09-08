@@ -1,3 +1,12 @@
+## 1.1.1 (2026-09-08)
+
+- Resolve Chat Completions and Responses through Pi's bundled API factories.
+  Installed packages now load and stream with host-provided Pi dependencies.
+- Pass the host-resolved Chat Completions transport into admission recovery,
+  preserving its retry and cancellation behavior.
+- Run existing wire verification from the packed artifact in CI and publishing.
+  Correct the fixtures' required `max` catalog alias and surface catalog warnings.
+
 ## 1.1.0 (2026-09-08)
 
 - Two-stage compaction: `/fast session` now performs stage 1 mechanically

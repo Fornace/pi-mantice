@@ -60,7 +60,7 @@ Absorbs and replaces `fornace-pi-models`.
 
 ```sh
 pi install npm:pi-mantice        # from the npm registry
-pi install git:github.com/Fornace/pi-mantice@v1.0.0   # straight from the repo
+pi install git:github.com/Fornace/pi-mantice@v1.1.1   # straight from the repo
 ```
 
 Requires `MANTICE_API_KEY` (and optionally `MANTICE_BASE_URL`) in the
@@ -105,6 +105,7 @@ Fornace production hosts are blocked by default.
 npm test          # unit tests, no Pi or network needed
 npm run typecheck
 npm run test:session-wire # real Pi CLI against an isolated loopback fixture
+npm run verify:package    # both wire checks from the tarball without local Pi peers
 MANTICE_BIN=/absolute/path/to/mantice npm run test:session-recovery # full local chain
 npm run snapshot  # refresh extensions/models-snapshot.json from the live catalog
 npm run audit     # spawn a real Pi and compare its registry to the live catalog

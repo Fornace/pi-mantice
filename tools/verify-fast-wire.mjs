@@ -25,7 +25,7 @@ function sse(response, events) {
 const server = createServer(async (request, response) => {
   if (request.method === 'GET' && request.url === '/v1/models') {
     response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ data: ['fornace-max', 'fornace-fast'].map(id => ({
+    response.end(JSON.stringify({ data: ['fornace-max', 'max', 'fornace-fast'].map(id => ({
       id, owned_by: 'routing', context_window: 1100000, max_output_tokens: 16384,
       mode: 'chat', class: id === 'fornace-max' ? 'max' : 'fast',
     })) }));
@@ -183,6 +183,7 @@ try {
   assert.deepEqual(result.details && { mechanical: result.details.mechanical },
     { mechanical: true }, 'mechanical details flag missing');
   assert.ok(!pi.killed);
+  assert.ok(!stderr.includes('[pi-mantice]'), stderr);
   console.log('PASS: /fast session compacted mechanically with zero model calls; /compact ran Pi native on pruned input; fast_read executed via RTK');
 } finally {
   pi.kill('SIGKILL');

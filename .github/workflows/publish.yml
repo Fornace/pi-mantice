@@ -34,6 +34,7 @@ jobs:
             | tar -xz -C /usr/local/bin rtk
           rtk --version
       - run: npm run test:fast-wire
+      - run: npm run verify:package
       - name: Recheck source immediately before publishing
         run: node .github/scripts/check-release.mjs
       - run: npm publish --provenance --access public
