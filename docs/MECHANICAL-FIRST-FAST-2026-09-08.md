@@ -91,3 +91,14 @@ For maximum fidelity, stage 2 (`/compact`) still exists on the pruned input.
 - `rtk read --level aggressive` on a 7.5 KB Rust file: 620 bytes (92%
   smaller); `rtk smart` returns a two-line summary in ~11 ms.
 - Installed RTK 0.46.0; `rtk rewrite` still classifies cat/rg/ls/find/git.
+
+## Release
+
+Published as pi-mantice 1.1.0 on npm 2026-09-08 (provenance attached, tag
+v1.1.0, publish run 34223628548). OIDC trusted publishing now works end to
+end: the trusted publisher (Fornace/pi-mantice, publish.yml) is registered in
+the package settings on npmjs.com, and the long-standing `NODE_AUTH_TOKEN:
+none` env that blocked OIDC activation was removed from the workflow. Future
+releases publish automatically on a `v*` tag push. Local install switched
+from the stale pinned path to `npm:pi-mantice` and verified to contain the
+mechanical hook, round conclusions and fast tools.
