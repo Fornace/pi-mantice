@@ -1,3 +1,14 @@
+## 1.2.0 (2026-09-10)
+
+- New `fast_session` tool: the agent-callable twin of `/fast session`. It
+  arms the mechanical gate mid-turn and fires the exact same compaction
+  path on the first idle `agent_settled`, so it never aborts an active
+  run. While armed, threshold and overflow auto-compactions also turn
+  mechanical (zero model calls). Agents should call it at ~50% context
+  usage and then finish their reply.
+- `MechanicalGate` gained a `has()` probe so the tool trigger can tell an
+  armed gate from one already consumed by an auto-compaction.
+
 ## 1.1.1 (2026-09-08)
 
 - Resolve Chat Completions and Responses through Pi's bundled API factories.

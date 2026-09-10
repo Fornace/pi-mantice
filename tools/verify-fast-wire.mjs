@@ -39,6 +39,18 @@ const server = createServer(async (request, response) => {
   const body = JSON.parse(Buffer.concat(chunks));
   const wire = JSON.stringify(body);
   calls.push({ model: body.model, wire, hasToolResults: wire.includes('tool_call_id') });
+  const wantsFastSession = Array.isArray(body.tools) && wire.includes('FASTSESSION')
+    && calls.filter(c => c.wire.includes('FASTSESSION')).length === 1;
+  if (wantsFastSession) {
+    sse(response, [
+      { id: 'f', object: 'chat.completion.chunk', model: body.model, choices: [{ index: 0,
+        delta: { role: 'assistant', tool_calls: [{ index: 0, id: 'call-fastsess', type: 'function',
+          function: { name: 'fast_session', arguments: JSON.stringify({ focus: 'agent tool focus hint' }) } }] } }] },
+      { id: 'f', object: 'chat.completion.chunk', model: body.model, choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }] },
+      { id: 'f', object: 'chat.completion.chunk', model: body.model, choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: 10, completion_tokens: 3, total_tokens: 13 } },
+    ]);
+    return;
+  }
   const wantsTools = Array.isArray(body.tools) && wire.includes('TOOLSNOW')
     && calls.filter(c => c.wire.includes('TOOLSNOW')).length === 1;
   if (wantsTools) {
@@ -182,9 +194,25 @@ try {
   assert.equal(result.usage, undefined, 'mechanical compaction must not record LLM usage');
   assert.deepEqual(result.details && { mechanical: result.details.mechanical },
     { mechanical: true }, 'mechanical details flag missing');
+  // Agent-initiated fast_session tool: armed mid-turn, fires on agent_settled,
+  // zero model calls for the compaction itself.
+  const mark = events.length;
+  send({ type: 'prompt', message: 'turn five: FASTSESSION compact now' });
+  await nextSettled('fast_session tool turn settled');
+  const toolFast = events.filter(e => e.type === 'tool_execution_start' && e.toolName === 'fast_session');
+  assert.ok(toolFast.length === 1, `fast_session tool was never executed; tool events: ${JSON.stringify(events.filter(e => e.type.startsWith('tool_')).map(e => ({ t: e.type, tool: e.toolName })))}`);
+  const callsAtSettle = calls.length;
+  const toolMechanical = await wait_for(e => e.type === 'compaction_end'
+    && String(e.result?.summary ?? '').startsWith('Mechanical context digest')
+    && events.indexOf(e) >= mark, 60000, 'fast_session tool mechanical compaction_end');
+  assert.equal(calls.length, callsAtSettle, `fast_session tool compaction made ${calls.length - callsAtSettle} model calls, expected 0`);
+  assert.ok(String(toolMechanical.result?.summary ?? '').includes('agent tool focus hint'),
+    'fast_session tool focus hint lost from digest');
+  assert.ok(String(toolMechanical.result?.summary ?? '').includes('turn five: FASTSESSION compact now'),
+    'user message lost from fast_session tool digest');
   assert.ok(!pi.killed);
   assert.ok(!stderr.includes('[pi-mantice]'), stderr);
-  console.log('PASS: /fast session compacted mechanically with zero model calls; /compact ran Pi native on pruned input; fast_read executed via RTK');
+  console.log('PASS: /fast session compacted mechanically with zero model calls; /compact ran Pi native on pruned input; fast_read executed via RTK; fast_session tool armed mid-turn and compacted mechanically on settle');
 } finally {
   pi.kill('SIGKILL');
   await Promise.race([done, new Promise(r => setTimeout(r, 3000))]);

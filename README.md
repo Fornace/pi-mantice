@@ -28,6 +28,12 @@ Absorbs and replaces `fornace-pi-models`.
   stays Pi native: `/compact` (manual or auto) summarizes the pruned payload
   with the session model, so the AI summary never sees unpruned bulk.
   Original session history always remains recoverable in the JSONL.
+- Agent-initiated compaction: the `fast_session` tool lets the agent run
+  stage 1 itself when context approaches ~50%, without waiting for the user.
+  It arms the mechanical gate mid-turn and fires the exact same compaction
+  path on the first idle `agent_settled`, so it never aborts an active run.
+  While armed, any threshold or overflow auto-compaction also turns
+  mechanical (zero model calls) instead of an expensive AI summary.
 - Native [RTK](https://github.com/rtk-ai/rtk) integration: supported Bash
   commands are rewritten for Mantice sessions to return compact output, and
   the `fast_read` / `fast_write` tools expose RTK's filtered read and
@@ -88,6 +94,13 @@ payload. Preview measures serialized active-context bytes; the actual
 summarization span also depends on Pi's retained window. Status, preview, help
 and RTK checks do not call a model. `RTK_DISABLED=1` remains respected by the
 RTK check.
+
+The `fast_session` tool is the agent-callable twin of `/fast session`: the
+model can invoke it mid-turn when it notices context pressure (agents should
+call it at ~50% usage and then finish the reply). It never compacts inline,
+because compaction aborts the active run; it arms the mechanical gate and the
+compaction fires automatically on the first idle `agent_settled` after the
+turn, with the same notifications and stats as the slash command.
 
 ## Setup for your own gateway
 
