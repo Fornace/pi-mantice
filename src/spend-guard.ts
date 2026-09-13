@@ -181,12 +181,12 @@ export function registerSpendGuard(api: ExtensionAPI) {
       ...streams,
       stream: (model, context, options) => lazyStream(model, async () => {
         const projected = prepare(model, context);
-        const reservation = allowance.reserve(model, options);
+        const reservation = allowance.reserve(model, options, estimate(projected));
         return account(streams.stream(model, projected, options), reservation);
       }),
       streamSimple: (model, context, options) => lazyStream(model, async () => {
         const projected = prepare(model, context);
-        const reservation = allowance.reserve(model, options);
+        const reservation = allowance.reserve(model, options, estimate(projected));
         return account(streams.streamSimple(model, projected, options), reservation);
       }),
     };

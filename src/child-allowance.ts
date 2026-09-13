@@ -80,13 +80,13 @@ export function childAllowance(api: ExtensionAPI, getContext: () => ExtensionCon
     api.appendEntry(ALLOWANCE_ENTRY, { version: 1, kind: "pause", reason, ...(outcome ? { outcome } : {}) });
     pause(reason, outcome);
   }
-  function reserve(model: Model<Api>, options?: SimpleStreamOptions): string | undefined {
+  function reserve(model: Model<Api>, options: SimpleStreamOptions | undefined, estimatedInput: number): string | undefined {
     const state = snapshot();
     if (!state) return undefined;
     if (state.blocked) pause("managed child hard allowance paused; human allowance recovery required");
-    // Worst-case request reservation, independent of byte/token heuristics.
-    // Provider must honor its advertised input window and the output ceiling.
-    const tokens = model.contextWindow + (options?.maxTokens ?? model.maxTokens);
+    // Reserve the projected serialized input plus the declared output ceiling.
+    // Failed zero-usage streams retain this reservation across restart.
+    const tokens = estimatedInput + (options?.maxTokens ?? model.maxTokens);
     if (!Number.isSafeInteger(tokens) || tokens <= 0) block("invalid managed child request ceiling");
     if (state.spent + tokens > state.limit) {
       block(`managed child hard allowance: ${state.spent} charged/reserved, ${tokens} required, ${state.limit} total`,
