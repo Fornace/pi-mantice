@@ -38,6 +38,7 @@ import { registerRtk } from "../src/rtk.ts";
 import { registerRtkTools } from "../src/rtk-tools.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
 import { pruneSummaryToolResults } from "../src/summary-pruning.ts";
+import { registerSpendGuard } from "../src/spend-guard.ts";
 import { supportsCompactionRecovery } from "../src/admission-recovery.ts";
 
 const COMPAT = {
@@ -104,6 +105,7 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 
 export default async function register(api: ExtensionAPI) {
   registerSessionIdentity(api);
+  const guard = registerSpendGuard(api);
   let admissionContext: ExtensionContext | undefined;
   api.on("session_start", (_event, ctx) => { admissionContext = ctx; });
   api.on("session_shutdown", () => { admissionContext = undefined; });
@@ -150,8 +152,8 @@ export default async function register(api: ExtensionAPI) {
       models: runtimeModels(rows),
       fetchModels: async () => runtimeModels(await resolveCatalog()),
       api: {
-        "openai-completions": completions,
-        "openai-responses": RESPONSES_API,
+        "openai-completions": guard.wrap(completions),
+        "openai-responses": guard.wrap(RESPONSES_API),
       },
     }));
   }
@@ -198,7 +200,7 @@ export default async function register(api: ExtensionAPI) {
 
     // /fast session: replace the span with the mechanical digest directly.
     // Zero model calls; the digest is deterministic and byte-bounded.
-    if (mechanicalGate.consume(ctx.sessionManager.getSessionId())) {
+    if (mechanicalGate.consume(ctx.sessionManager.getSessionId()) || guard.needsMechanical()) {
       const fileLists = fileListsOf(preparation.fileOps);
       const digest = buildMechanicalDigest({
         messages: pruned.messages,

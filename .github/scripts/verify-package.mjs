@@ -21,11 +21,41 @@ try {
   assert.ok(filename.endsWith('.tgz'), 'npm pack did not produce a tarball');
   const tarball = join(root, filename);
   const entries = execFileSync('tar', ['-tzf', tarball], { encoding: 'utf8' });
-  assert.ok(!entries.split('\n').some(entry => entry.startsWith('package/node_modules/')),
-    'Wire verification requires a package without checkout dependencies');
+  const entryLines = entries.split('\n').filter(Boolean);
+  const bundledRoots = new Set(entryLines.flatMap(entry => {
+    const match = entry.match(/^package\/node_modules\/([^/]+)\//);
+    return match ? [match[1]] : [];
+  }));
+  assert.deepEqual([...bundledRoots].sort(), [
+    'pi-codex-goal', 'pi-frontier', 'pi-message-sidebar', 'pi-subagent-extension',
+  ], 'Packed artifact has unexpected or missing bundled dependencies');
+  for (const required of [
+    'package/node_modules/pi-codex-goal/extensions/index.ts',
+    'package/node_modules/pi-codex-goal/prompts/create-goal.md',
+    'package/node_modules/pi-message-sidebar/index.ts',
+    'package/node_modules/pi-subagent-extension/index.ts',
+    'package/node_modules/pi-subagent-extension/usage-receipts.ts',
+    'package/node_modules/pi-subagent-extension/skills/fornace-model-routing/SKILL.md',
+  ]) assert.ok(entryLines.includes(required), `Packed artifact missing ${required}`);
   const integrity = 'sha512-' + createHash('sha512').update(await readFile(tarball)).digest('base64');
   execFileSync('tar', ['-xzf', tarball, '-C', root]);
   const cwd = join(root, 'package');
+  const rpc = execFileSync(pi, [
+    '--offline', '--no-extensions', '-e', cwd, '--no-themes', '--no-context-files',
+    '--mode', 'rpc',
+  ], {
+    cwd: root, input: JSON.stringify({ type: 'get_commands', id: 'package-load' }) + '\n',
+    encoding: 'utf8', timeout: 60000,
+    env: { ...process.env, PI_CODING_AGENT_DIR: join(root, 'agent'), PI_OFFLINE: '1', PI_TELEMETRY: '0' },
+  });
+  const response = rpc.split('\n').filter(Boolean).map(line => JSON.parse(line))
+    .find(event => event.id === 'package-load');
+  assert.equal(response?.success, true, 'Extracted package did not answer the Pi RPC load probe');
+  const commands = new Set(response.data.commands.map(command => command.name));
+  for (const command of ['goal', 'create-goal', 'agents', 'subagent-guard', 'sidebar',
+    'mantice-guard', 'mantice-child-budget', 'mantice-setup', 'skill:fornace-model-routing']) {
+    assert.ok(commands.has(command), `Extracted package did not load ${command}`);
+  }
   for (const script of ['verify-session-wire.mjs', 'verify-fast-wire.mjs']) {
     execFileSync(process.execPath, [join(cwd, 'tools', script)], {
       cwd, env: { ...process.env, PI_TEST_BIN: pi }, stdio: 'inherit', timeout: 180000,
