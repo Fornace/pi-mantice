@@ -9,7 +9,7 @@ type Record =
   | { kind: "open"; limit: number; baseline: number }
   | { kind: "reserve"; id: string; tokens: number }
   | { kind: "settle"; id: string; tokens: number }
-  | { kind: "pause"; reason: string }
+  | { kind: "pause"; reason: string; outcome?: "budget_yield" }
   | { kind: "grant"; limit: number };
 const tokensOf = (message: AssistantMessage) => {
   const { input, output, cacheRead, cacheWrite } = message.usage;
@@ -19,7 +19,7 @@ const tokensOf = (message: AssistantMessage) => {
 };
 
 export function childAllowance(api: ExtensionAPI, getContext: () => ExtensionContext | undefined,
-  pause: (reason: string) => never) {
+  pause: (reason: string, outcome?: "budget_yield") => never) {
   function snapshot() {
     const ctx = getContext();
     if (!ctx) throw new Error("Missing allowance session context");
@@ -46,6 +46,7 @@ export function childAllowance(api: ExtensionAPI, getContext: () => ExtensionCon
       records.push(record);
     }
     let limit = 0, spent = 0, blocked = false;
+    let outcome: "budget_yield" | undefined;
     const reservations = new Map<string, number>();
     const settled = new Set<string>();
     for (const [index, record] of records.entries()) {
@@ -64,18 +65,20 @@ export function childAllowance(api: ExtensionAPI, getContext: () => ExtensionCon
           if (!reservations.has(record.id) || settled.has(record.id)
             || !Number.isSafeInteger(record.tokens) || record.tokens < 0) pause("invalid child settlement");
           settled.add(record.id); reservations.set(record.id, record.tokens); break;
-        case "pause": blocked = true; break;
+        case "pause":
+          if (record.outcome !== undefined && record.outcome !== "budget_yield") pause("invalid child allowance outcome");
+          blocked = true; outcome = record.outcome; break;
         case "grant":
           if (!Number.isSafeInteger(record.limit) || record.limit <= limit) pause("invalid child allowance grant");
-          limit = record.limit; blocked = false; break;
+          limit = record.limit; blocked = false; outcome = undefined; break;
         default: pause("invalid child allowance record");
       }
     }
-    return { limit, spent: spent + [...reservations.values()].reduce((sum, value) => sum + value, 0), blocked };
+    return { limit, spent: spent + [...reservations.values()].reduce((sum, value) => sum + value, 0), blocked, outcome };
   }
-  function block(reason: string): never {
-    api.appendEntry(ALLOWANCE_ENTRY, { version: 1, kind: "pause", reason });
-    pause(reason);
+  function block(reason: string, outcome?: "budget_yield"): never {
+    api.appendEntry(ALLOWANCE_ENTRY, { version: 1, kind: "pause", reason, ...(outcome ? { outcome } : {}) });
+    pause(reason, outcome);
   }
   function reserve(model: Model<Api>, options?: SimpleStreamOptions): string | undefined {
     const state = snapshot();
@@ -86,7 +89,8 @@ export function childAllowance(api: ExtensionAPI, getContext: () => ExtensionCon
     const tokens = model.contextWindow + (options?.maxTokens ?? model.maxTokens);
     if (!Number.isSafeInteger(tokens) || tokens <= 0) block("invalid managed child request ceiling");
     if (state.spent + tokens > state.limit) {
-      block(`managed child hard allowance: ${state.spent} charged/reserved, ${tokens} required, ${state.limit} total`);
+      block(`managed child hard allowance: ${state.spent} charged/reserved, ${tokens} required, ${state.limit} total`,
+        "budget_yield");
     }
     const id = randomUUID();
     api.appendEntry(ALLOWANCE_ENTRY, { version: 1, kind: "reserve", id, tokens });

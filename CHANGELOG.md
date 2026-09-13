@@ -1,3 +1,12 @@
+# Changelog
+
+## Unreleased
+
+- Keep provider failures in Mantice routing instead of treating six errors as
+  evidence for request compaction.
+- Emit `budget_yield` when a managed child reaches its durable token tranche so
+  the parent can continue from partial work without blocking sibling admission.
+
 ## 1.2.1 (2026-09-13)
 
 - Encode `fast_read.level` as a string enum. Gemini subscription requests no

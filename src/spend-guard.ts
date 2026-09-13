@@ -15,6 +15,7 @@ interface GuardState {
   version: 1;
   state: "ready" | "compacting" | "paused";
   reason: string;
+  outcome?: "budget_yield";
   at: number;
   checkpoint?: GuardCheckpoint;
   before?: number;
@@ -36,15 +37,17 @@ export function registerSpendGuard(api: ExtensionAPI) {
       sessionId: ctx?.sessionManager.getSessionId() });
     if (next.state !== "ready") console.error(`[pi-mantice] guard ${next.state}: ${next.reason}`);
   }
-  function recoveryInstruction(reason: string) {
-    return reason.startsWith("managed child hard allowance")
+  function recoveryInstruction(reason: string, outcome?: GuardState["outcome"]) {
+    return outcome === "budget_yield"
+      ? "Worker yielded its resumable session to the parent."
+      : reason.startsWith("managed child hard allowance")
       ? "Human recovery requires /mantice-child-budget <total> in an idle interactive session."
       : "Repair then /mantice-guard retry.";
   }
-  function pause(reason: string): never {
-    publish({ ...state, state: "paused", reason, at: Date.now() });
+  function pause(reason: string, outcome?: GuardState["outcome"]): never {
+    publish({ ...state, state: "paused", reason, at: Date.now(), ...(outcome ? { outcome } : {}) });
     // Avoid overflow/retry keywords: this error is terminal, never AI recovery.
-    throw new Error(`Mantice spend guard paused: ${reason}. ${recoveryInstruction(reason)}`);
+    throw new Error(`Mantice spend guard paused: ${reason}. ${recoveryInstruction(reason, outcome)}`);
   }
   const allowance = childAllowance(api, () => ctx, pause);
   function restore(context: ExtensionContext) {
@@ -54,7 +57,8 @@ export function registerSpendGuard(api: ExtensionAPI) {
     for (const entry of context.sessionManager.getBranch()) {
       if (entry.type === "custom" && entry.customType === GUARD_ENTRY) {
         const value = entry.data as GuardState;
-        if (value?.version !== 1 || !["ready", "compacting", "paused"].includes(value.state)) {
+        if (value?.version !== 1 || !["ready", "compacting", "paused"].includes(value.state) ||
+          (value.outcome !== undefined && value.outcome !== "budget_yield")) {
           pause("invalid durable guard record");
         }
         state = value;
@@ -112,7 +116,8 @@ export function registerSpendGuard(api: ExtensionAPI) {
 
   function prepare(model: Model<Api>, context: Context): Context {
     if (!ctx) throw new Error("Mantice spend guard has no session context");
-    if (allowance.snapshot()?.blocked) pause("managed child hard allowance paused; human allowance recovery required");
+    const childState = allowance.snapshot();
+    if (childState?.blocked) pause("managed child hard allowance paused", childState.outcome);
     if (nativeMechanical) pause("automatic summarizer attempted a model call");
     if (summarizing && state.state === "ready") {
       if (estimate(context) >= Math.min(GUARD_LIMITS.contextTokens, model.contextWindow * 0.5)) {
@@ -121,7 +126,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
       return context;
     }
     if (state.state !== "ready" && !retryRequested) {
-      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason)}`);
+      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome)}`);
     }
     const forced = retryRequested;
     retryRequested = false;
