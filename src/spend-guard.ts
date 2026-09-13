@@ -38,7 +38,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
   }
   function recoveryInstruction(reason: string) {
     return reason.startsWith("managed child hard allowance")
-      ? "Human recovery requires /mantice-guard allow <total> in an idle interactive session."
+      ? "Human recovery requires /mantice-child-budget <total> in an idle interactive session."
       : "Repair then /mantice-guard retry.";
   }
   function pause(reason: string): never {
