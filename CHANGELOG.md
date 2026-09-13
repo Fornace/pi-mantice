@@ -1,3 +1,9 @@
+## 1.2.1 (2026-09-13)
+
+- Encode `fast_read.level` as a string enum. Gemini subscription requests no
+  longer receive unsupported `const` fields from this tool.
+- No routing, pricing or automatic-guard policy changes in this hotfix.
+
 ## 1.2.0 (2026-09-10)
 
 - New `fast_session` tool: the agent-callable twin of `/fast session`. It
