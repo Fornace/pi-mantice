@@ -63,7 +63,11 @@ transport. No overflow-shaped error or AI fallback is used for the brake.
 
 Custom entry: `mantice-spend-guard`.
 Event bus: `mantice:spend-guard`.
-Data: `{version:1,state:"ready"|"compacting"|"paused",reason,at,before?,after?,checkpoint?}`.
+Data: `{version:1,state:"ready"|"compacting"|"paused",reason,outcome?,at,before?,after?,checkpoint?}`.
+A valid managed-child tranche exhaustion adds `outcome:"budget_yield"`. The
+subagent runtime preserves the session and partial output, releases capacity,
+and wakes a still-active parent goal once. It does not block sibling admission.
+Corrupt allowance records and guard-integrity failures remain pauses.
 The event omits checkpoint content and adds `sessionId`. Records are branch-local
 and restored on startup/tree navigation. A native compaction invalidates the
 projection because it changes the original message prefix.
@@ -106,16 +110,17 @@ Temporary reproducible scripts and receipts:
 
 ## Adoption and remaining gaps
 
-Install/reload is deliberately deferred to the incident owner. Existing live
-sessions and children are unchanged. No gateway route or global settings change.
-The tarball is a local source artifact, not an npm release.
+Version 1.3.0 bundles exact reviewed goal, subagent and sidebar component
+tarballs. The package verifier extracts that artifact outside the checkout,
+requires the expected bundled roots and entry points, loads every component
+through real Pi RPC, then runs both wire checks. Registry publication,
+installation and live-session reload remain separate evidence.
 
 The provider-boundary guard covers the registered Mantice/Fornace transports,
 not arbitrary direct HTTP tools, other providers, or children that omit the
 extension. Existing admission retries established as unstarted remain inside
-the transport wrapper. No invoice-level spend cap or semantic task-progress
-classifier is claimed. Thresholds are initial incident policy values, not
-production workload calibration. No live paid-provider or full goal/subagent
-package integration was exercised. Explicit successful repair retry, corrupt
-checkpoint, native failure injection, and interactive TUI display remain
-additional manual probe work at this milestone.
+the transport wrapper. Goal accounting receives durable child input/output
+receipts; cache channels remain observable but follow the goal package's
+existing budget definition. The guard does not claim invoice-level USD
+accounting or semantic task-progress classification. Thresholds remain initial
+incident policy values pending production workload calibration.

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-09-13)
 
 - Keep provider failures in Mantice routing instead of treating six errors as
   evidence for request compaction.

@@ -1,7 +1,7 @@
 {
   "name": "pi-mantice",
   "version": "1.3.0",
-  "description": "Mantice gateway integration for Pi: live model catalog with capability fields, class-aware metadata, two-stage compaction (mechanical RTK-style pruning plus Pi native AI summaries), canonical overflow recovery, and first-install setup",
+  "description": "Integrated Mantice runtime for Pi: routed models, mechanical request reduction, accountable goals, managed subagents, and an event-driven activity sidebar",
   "type": "module",
   "license": "MIT",
   "author": "Francesco Frapporti <effedue@gmail.com>",
@@ -16,19 +16,32 @@
     "mantice",
     "fornace",
     "models",
-    "compaction"
+    "compaction",
+    "goals",
+    "subagents",
+    "sidebar"
   ],
   "files": [
     "extensions",
     "src",
     "tools",
+    "vendor",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions",
+      "./node_modules/pi-codex-goal/extensions/index.ts",
+      "./node_modules/pi-subagent-extension/index.ts",
+      "./node_modules/pi-message-sidebar/index.ts"
+    ],
+    "skills": [
+      "./node_modules/pi-subagent-extension/skills"
+    ],
+    "prompts": [
+      "./node_modules/pi-codex-goal/prompts"
     ]
   },
   "scripts": {
@@ -44,8 +57,16 @@
     "e2e": "python3 tools/e2e-compact.py"
   },
   "dependencies": {
-    "pi-frontier": "^1.2.0"
+    "pi-frontier": "^1.2.0",
+    "pi-codex-goal": "file:vendor/pi-codex-goal-17df02e.tgz",
+    "pi-message-sidebar": "file:vendor/pi-message-sidebar-b8e6e82.tgz",
+    "pi-subagent-extension": "file:vendor/pi-subagent-extension-2a1d95f.tgz"
   },
+  "bundledDependencies": [
+    "pi-codex-goal",
+    "pi-message-sidebar",
+    "pi-subagent-extension"
+  ],
   "devDependencies": {
     "@earendil-works/pi-ai": "0.85.1",
     "@earendil-works/pi-coding-agent": "0.85.1",

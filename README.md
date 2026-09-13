@@ -1,14 +1,31 @@
 # pi-mantice
 
-Mantice gateway integration for [Pi](https://github.com/badlogic/pi-mono):
-live model catalog with capability fields, class-aware metadata, two-stage
-fast compaction (mechanical pruning plus Pi native AI summaries), RTK fast
-file tools, canonical overflow recovery, and first-install setup.
+Integrated Mantice runtime for [Pi](https://github.com/badlogic/pi-mono):
+live routed models, pre-request mechanical reduction, accountable autonomous
+goals, managed subagents, and an event-driven activity sidebar.
 
-Absorbs and replaces `fornace-pi-models`.
+The 1.3 line absorbs and replaces `fornace-pi-models` and bundles the reviewed
+Fornace goal, subagent, and sidebar components. One package install keeps their
+event and persistence contracts at matching revisions.
 
 ## What it does
 
+- Before either Mantice transport runs, an oversized request is mechanically
+  projected below the lesser of 200K tokens and half the advertised context
+  window. High cumulative or five-minute token throughput triggers the same
+  reduction. Provider failures remain the router's concern and do not cause
+  irrelevant request compaction.
+- Active goal budgets include parent and child input plus output. Child usage
+  receipts are durable, deduplicated and reconciled after restart.
+- Managed subagents share FIFO capacity, retain session files, release capacity
+  while idle, and yield their partial result when a worker token tranche is
+  reached. A background yield wakes the still-active parent once. One worker's
+  budget yield does not block unrelated assignments.
+- The sidebar consumes goal and worker events without polling. It distinguishes
+  active, queued, failed, paused and yielded workers. Message summaries have
+  bounded durable attempts and honor `Retry-After` before automatic recovery.
+- Astra is used only when explicitly requested. Routine delegation uses
+  `fornace-flash`, `fornace-fast`, `fornace-reasoning` and `fornace-max`.
 - Registers `mantice` (groups + aliases) and `fornace` (curated groups) from
   the authenticated `GET /v1/models` at startup. One fetch shared by both.
 - Derives Pi model metadata from the gateway's capability fields (`mode`,
@@ -65,8 +82,8 @@ Absorbs and replaces `fornace-pi-models`.
 ## Install
 
 ```sh
-pi install npm:pi-mantice        # from the npm registry
-pi install git:github.com/Fornace/pi-mantice@v1.1.1   # straight from the repo
+pi install npm:pi-mantice@1.3.0
+pi install git:github.com/Fornace/pi-mantice@v1.3.0
 ```
 
 Requires `MANTICE_API_KEY` (and optionally `MANTICE_BASE_URL`) in the
@@ -134,7 +151,13 @@ npm run audit     # spawn a real Pi and compare its registry to the live catalog
 - `src/rtk.ts`, `src/rtk-tools.ts` RTK command rewriting and fast tools
 - `src/overflow.ts` canonical overflow mapping + response-model notices
 - `src/frontier.ts` pi-frontier join used by setup and annotations
-- `extensions/mantice-models.ts` Pi wiring (the only extension file)
+- `src/spend-guard.ts`, `src/guard-projection.ts` pre-request reduction and
+  managed-child allowance enforcement
+- `node_modules/pi-codex-goal` accountable autonomous goal runtime
+- `node_modules/pi-subagent-extension` managed delegation and usage receipts
+- `node_modules/pi-message-sidebar` goal and worker activity surface
+- `vendor/PROVENANCE.md` exact bundled component commits and SHA256 values
+- `extensions/mantice-models.ts` Mantice provider and guard wiring
 - `docs/PLAN.md` architecture plan, incidents, and rollout gates
 
 ## Publishing
