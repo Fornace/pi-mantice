@@ -1,6 +1,7 @@
-import type { Context, Model, Api, ProviderStreams } from "@earendil-works/pi-ai";
+import type { Context, Model, Api, ProviderStreams, AssistantMessageEvent } from "@earendil-works/pi-ai";
 import { lazyStream } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { childAllowance } from "./child-allowance.ts";
 import { applyCheckpoint, compactRequest, estimate, type GuardCheckpoint } from "./guard-projection.ts";
 
 export const GUARD_ENTRY = "mantice-spend-guard";
@@ -35,11 +36,17 @@ export function registerSpendGuard(api: ExtensionAPI) {
       sessionId: ctx?.sessionManager.getSessionId() });
     if (next.state !== "ready") console.error(`[pi-mantice] guard ${next.state}: ${next.reason}`);
   }
+  function recoveryInstruction(reason: string) {
+    return reason.startsWith("managed child hard allowance")
+      ? "Human recovery requires /mantice-guard allow <total> in an idle interactive session."
+      : "Repair then /mantice-guard retry.";
+  }
   function pause(reason: string): never {
     publish({ ...state, state: "paused", reason, at: Date.now() });
     // Avoid overflow/retry keywords: this error is terminal, never AI recovery.
-    throw new Error(`Mantice spend guard paused: ${reason}. Repair then /mantice-guard retry.`);
+    throw new Error(`Mantice spend guard paused: ${reason}. ${recoveryInstruction(reason)}`);
   }
+  const allowance = childAllowance(api, () => ctx, pause);
   function restore(context: ExtensionContext) {
     ctx = context;
     state = initial();
@@ -79,16 +86,33 @@ export function registerSpendGuard(api: ExtensionAPI) {
     description: "Show spend guard state or retry mechanical reduction after repair",
     handler: async (args, context) => {
       if (args.trim() === "retry") {
+        if (allowance.snapshot()?.blocked) throw new Error("Managed child hard allowance requires human recovery");
         retryRequested = true;
         context.ui.notify("Mechanical retry armed for the next request. The pause clears only after reduction.", "info");
       } else if (args.trim() && args.trim() !== "status") {
         throw new Error("Use /mantice-guard status or /mantice-guard retry");
-      } else context.ui.notify(JSON.stringify({ ...state, checkpoint: undefined, limits: GUARD_LIMITS }), "info");
+      } else context.ui.notify(JSON.stringify({ ...state, checkpoint: undefined, limits: GUARD_LIMITS,
+        allowance: allowance.snapshot() }), "info");
+    },
+  });
+
+  api.registerCommand("mantice-child-budget", {
+    description: "Inspect child lifetime allowance or explicitly raise its total in a human session",
+    handler: async (args, context) => {
+      const value = args.trim();
+      if (value && value !== "status") {
+        allowance.grant(value, context);
+        if (state.reason.startsWith("managed child hard allowance")) {
+          publish({ ...state, state: "ready", reason: "human raised child total allowance", at: Date.now() });
+        }
+      }
+      context.ui.notify(JSON.stringify(allowance.snapshot() ?? { managedChild: false }), "info");
     },
   });
 
   function prepare(model: Model<Api>, context: Context): Context {
     if (!ctx) throw new Error("Mantice spend guard has no session context");
+    if (allowance.snapshot()?.blocked) pause("managed child hard allowance paused; human allowance recovery required");
     if (nativeMechanical) pause("automatic summarizer attempted a model call");
     if (summarizing && state.state === "ready") {
       if (estimate(context) >= Math.min(GUARD_LIMITS.contextTokens, model.contextWindow * 0.5)) {
@@ -97,7 +121,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
       return context;
     }
     if (state.state !== "ready" && !retryRequested) {
-      throw new Error(`Mantice spend guard paused: ${state.reason}. Repair then /mantice-guard retry.`);
+      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason)}`);
     }
     const forced = retryRequested;
     retryRequested = false;
@@ -152,11 +176,24 @@ export function registerSpendGuard(api: ExtensionAPI) {
   function wrap(streams: ProviderStreams): ProviderStreams {
     return {
       ...streams,
-      stream: (model, context, options) => lazyStream(model, async () =>
-        streams.stream(model, prepare(model, context), options)),
-      streamSimple: (model, context, options) => lazyStream(model, async () =>
-        streams.streamSimple(model, prepare(model, context), options)),
+      stream: (model, context, options) => lazyStream(model, async () => {
+        const projected = prepare(model, context);
+        const reservation = allowance.reserve(model, options);
+        return account(streams.stream(model, projected, options), reservation);
+      }),
+      streamSimple: (model, context, options) => lazyStream(model, async () => {
+        const projected = prepare(model, context);
+        const reservation = allowance.reserve(model, options);
+        return account(streams.streamSimple(model, projected, options), reservation);
+      }),
     };
+  }
+  async function* account(stream: AsyncIterable<AssistantMessageEvent>, reservation?: string) {
+    for await (const event of stream) {
+      if (event.type === "done") allowance.settle(reservation, event.message);
+      if (event.type === "error") allowance.settle(reservation, event.error);
+      yield event;
+    }
   }
   return { wrap, needsMechanical: () => nativeMechanical || state.state !== "ready" };
 }
