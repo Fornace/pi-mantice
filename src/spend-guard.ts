@@ -9,7 +9,7 @@ export const GUARD_EVENT = "mantice:spend-guard";
 export const GUARD_LIMITS = {
   contextFraction: 0.5, contextTokens: 200_000,
   cumulativeTokens: 8_000_000, rateTokens: 2_000_000, rateWindowMs: 300_000,
-  spendContextFloor: 32_000, failures: 6,
+  spendContextFloor: 32_000,
 };
 interface GuardState {
   version: 1;
@@ -134,7 +134,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
       projected = context;
     }
     const now = Date.now();
-    let cumulative = 0, recent = 0, failures = 0;
+    let cumulative = 0, recent = 0;
     let lastUsage = 0;
     for (const entry of ctx.sessionManager.getBranch()) {
       if (entry.type !== "message" || entry.message.role !== "assistant") continue;
@@ -144,8 +144,6 @@ export function registerSpendGuard(api: ExtensionAPI) {
       const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
       cumulative += tokens;
       if (message.timestamp >= now - GUARD_LIMITS.rateWindowMs) recent += tokens;
-      if (message.stopReason === "error") failures++;
-      else if (message.stopReason !== "aborted") failures = 0;
       lastUsage = usage.input + usage.cacheRead + usage.cacheWrite;
     }
     const estimated = estimate(projected);
@@ -155,7 +153,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
       : before >= limit ? "context soft threshold"
       : before >= GUARD_LIMITS.spendContextFloor && cumulative >= GUARD_LIMITS.cumulativeTokens ? "cumulative token soft threshold"
       : before >= GUARD_LIMITS.spendContextFloor && recent >= GUARD_LIMITS.rateTokens ? "token rate soft threshold"
-      : failures >= GUARD_LIMITS.failures ? "consecutive provider failures" : undefined;
+      : undefined;
     if (!reason) return projected;
     publish({ ...state, state: "compacting", reason, before, at: now });
     try {

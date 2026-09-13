@@ -30,7 +30,10 @@ Soft thresholds, evaluated before each provider invocation:
   the last request checkpoint.
 - Same token sum over five minutes: 2,000,000 tokens since the checkpoint.
 - Spend triggers require at least 32,000 context tokens.
-- Six consecutive provider errors attempt mechanical reduction first.
+
+Provider failures do not trigger request compaction. Mantice routing and its
+structured circuit diagnosis own provider recovery; repeated failures with a
+small request are not evidence that reducing conversation history will help.
 
 Context uses the larger of serialized request bytes/4 (system prompt and tool
 schemas included) and the latest provider-reported input/cache usage since the
@@ -88,8 +91,7 @@ Temporary reproducible scripts and receipts:
   request and subsequent continuation make zero calls after the brake.
 - `threshold-probes.mjs`: real Pi JSON/print mode, persisted seeded sessions.
   Rate and cumulative triggers each reduce then permit one intended request.
-  Consecutive failures with irreducible history pause with zero calls. Restart
-  of the RPC probe's paused session remains blocked with zero calls.
+  Restart of the RPC probe's paused session remains blocked with zero calls.
 - The same real RPC 36-tool/queued-goal/brake probe also passed with
   `--no-session`: three reductions and zero calls after the brake. All original
   tool results remain in memory, but no session file or restart durability exists
