@@ -90,6 +90,13 @@ Temporary reproducible scripts and receipts:
   Rate and cumulative triggers each reduce then permit one intended request.
   Consecutive failures with irreducible history pause with zero calls. Restart
   of the RPC probe's paused session remains blocked with zero calls.
+- The same real RPC 36-tool/queued-goal/brake probe also passed with
+  `--no-session`: three reductions and zero calls after the brake. All original
+  tool results remain in memory, but no session file or restart durability exists
+  in that mode. Child launchers must remove `--no-session`, assign a stable
+  per-worker session path, retain it with worker artifacts, and resume that exact
+  session rather than replaying a fresh task. The extension cannot turn Pi's
+  in-memory SessionManager into a persistent one.
 - Packed tarball loaded through Pi's real extension loader passed the same
   36-tool/queued-goal/brake scenario. No external network or paid inference.
 - Existing `npm test`, typecheck and `test:fast-wire` were run. No new test suite
