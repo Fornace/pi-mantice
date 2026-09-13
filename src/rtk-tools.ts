@@ -7,6 +7,7 @@ import { execFile } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { Type } from "typebox";
+import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const RTK_TIMEOUT_MS = 15_000;
@@ -38,10 +39,7 @@ export async function registerRtkTools(api: ExtensionAPI): Promise<boolean> {
     promptGuidelines: ["Use fast_read instead of read when a filtered view is enough (large files, re-reading known files after compaction); prefer level aggressive first, minimal if bodies are needed."],
     parameters: Type.Object({
       path: Type.String({ description: "File path, absolute or relative to the working directory" }),
-      level: Type.Optional(Type.Union([
-        Type.Literal("minimal"),
-        Type.Literal("aggressive"),
-      ], { description: "Filter level, default minimal" })),
+      level: Type.Optional(StringEnum(["minimal", "aggressive"], { description: "Filter level, default minimal" })),
       maxLines: Type.Optional(Type.Number({ description: "Keep only the first N lines" })),
     }),
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
