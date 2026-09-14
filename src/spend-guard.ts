@@ -33,6 +33,11 @@ export function registerSpendGuard(api: ExtensionAPI) {
   let nativeMechanical = false;
   let summarizing = false;
   let retryRequested = false;
+  // Last time a spend-pace trigger admitted a request unreduced. Pace triggers
+  // re-arm on every request while lifetime or window tokens stay high, so
+  // without this cooldown each request would re-attempt a reduction that already
+  // proved impossible and re-notify.
+  let paceAdmittedAt = 0;
 
   function publish(next: GuardState) {
     state = next; // Close in memory before any persistence or observer can fail.
@@ -60,6 +65,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
     ctx = context;
     state = initial();
     retryRequested = false;
+    paceAdmittedAt = 0;
     for (const entry of context.sessionManager.getBranch()) {
       if (entry.type === "custom" && entry.customType === GUARD_ENTRY) {
         const value = entry.data as GuardState;
@@ -176,11 +182,26 @@ export function registerSpendGuard(api: ExtensionAPI) {
       : before >= GUARD_LIMITS.spendContextFloor && recent >= GUARD_LIMITS.rateTokens ? "token rate soft threshold"
       : undefined;
     if (!reason) return projected;
+    const pace = reason === "cumulative token soft threshold" || reason === "token rate soft threshold";
+    // A pace trigger fired moments ago and already admitted its request
+    // unreduced: nothing new can be reduced in the same window.
+    if (pace && now - paceAdmittedAt < GUARD_LIMITS.rateWindowMs) return projected;
     publish({ ...state, state: "compacting", reason, before, at: now });
+    // Spend-pace triggers trim the request when reduction helps, but never gate
+    // admission. The request is below the context limit by construction; a
+    // session too small or too fresh to reduce must still run. Demanding a
+    // verified reduction here dead-ends the session with no repairable cause.
+    const admitUnreduced = (detail: string): Context => {
+      paceAdmittedAt = now;
+      publish({ version: 1, state: "ready", reason: "spend-pace trigger admitted the request unreduced", at: now, before });
+      ctx?.ui.notify(`Mantice spend guard: ${detail} The request fits the context limit, so it runs unreduced.`, "warning");
+      return projected;
+    };
     try {
       const reduced = compactRequest(context, state.checkpoint);
       const after = estimate(reduced.context);
       if (after >= limit || after > estimated * 0.9) {
+        if (pace) return admitUnreduced("mechanical reduction could not shrink this request further.");
         const stalled = explainStalledReduction({ reduced: reduced.context, estimated, after, limit });
         state = { ...state, after }; // record what the reduction actually reached
         pause(stalled.reason, undefined, stalled.recovery);
@@ -191,6 +212,7 @@ export function registerSpendGuard(api: ExtensionAPI) {
     } catch (error) {
       if (state.state === "paused") throw error;
       const failure = error instanceof Error ? error.message : "mechanical reduction failed";
+      if (pace) return admitUnreduced(`${failure}.`);
       pause(failure, undefined, failure === IRREDUCIBLE
         ? "Nothing older than the newest tool batch is left to fold away."
           + " Start a fresh session with /new, or rewind with /tree."

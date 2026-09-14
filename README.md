@@ -13,8 +13,10 @@ event and persistence contracts at matching revisions.
 - Before either Mantice transport runs, an oversized request is mechanically
   projected below the lesser of 200K tokens and half the advertised context
   window. High cumulative or five-minute token throughput triggers the same
-  reduction. Provider failures remain the router's concern and do not cause
-  irrelevant request compaction.
+  reduction as a saving, never as a gate: a request that already fits the
+  context limit runs unreduced when reduction cannot shrink it, so spend
+  thresholds cannot stop work. Provider failures remain the router's concern
+  and do not cause irrelevant request compaction.
 - Active goal budgets include parent and child input plus output. Child usage
   receipts are durable, deduplicated and reconciled after restart.
 - Managed subagents share FIFO capacity, retain session files, release capacity
