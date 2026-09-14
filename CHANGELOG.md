@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.1 (2026-09-14)
+
+- Spend-pace triggers no longer pause the session when reduction cannot
+  shrink the request. A long automation session crossed the 8M cumulative
+  token threshold with a request already far below the context limit;
+  mechanical reduction had nothing left to fold away, so the guard paused
+  forever with an unrepairable cause and every retry re-paused identically.
+  Work stopped with no way out. Cumulative and five-minute throughput
+  thresholds now attempt the reduction as a token saving and, when it stalls
+  or the request is one indivisible tool batch, admit the request unreduced
+  with a visible warning: the request fits, so it runs. Only a request that
+  genuinely cannot fit the context limit still pauses, with its named
+  blocker. Pace admissions cool down for one rate window so a session over
+  the lifetime threshold does not re-attempt or re-notify on every request.
+
 ## 1.4.0 (2026-09-14)
 
 - A tool result's `details` no longer counts against the request estimate.
