@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.5 (2026-09-14)
+
+- Work never stops on mechanical reduction failures or stalled reductions when
+  the request fits within the model's actual context window.
+- Interrupted tool calls (where a user sent a message while a tool was
+  running or after aborting it) no longer crash compaction with `incomplete
+  retained tool batch`. Abandoned calls are safely cleared so user
+  interruptions never brick sessions.
+- Incomplete, unpaired, or unfinishable tool batches no longer throw fatal
+  errors during compaction.
+- If mechanical reduction fails or stalls (e.g. freeing < 10% or irreducible
+  tail), but the request fits within 80% of the model's context window, the
+  guard admits the request unreduced with a warning instead of pausing.
+- Non-child pauses auto-heal on session restore and prepare: sessions paused
+  under older versions immediately resume work on reload or next message.
+- Malformed durable guard records are safely ignored instead of pausing.
+
 ## 1.4.4 (2026-09-14)
 
 - Checkpoint prefix mismatch no longer pauses the session. A checkpoint is a

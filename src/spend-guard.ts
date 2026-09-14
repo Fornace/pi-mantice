@@ -69,17 +69,15 @@ export function registerSpendGuard(api: ExtensionAPI) {
     for (const entry of context.sessionManager.getBranch()) {
       if (entry.type === "custom" && entry.customType === GUARD_ENTRY) {
         const value = entry.data as GuardState;
-        if (value?.version !== 1 || !["ready", "compacting", "paused"].includes(value.state) ||
-          (value.outcome !== undefined && value.outcome !== "budget_yield") ||
-          (value.recovery !== undefined && typeof value.recovery !== "string")) {
-          pause("invalid durable guard record");
+        if (value?.version !== 1 || !["ready", "compacting", "paused"].includes(value.state)) {
+          continue;
         }
         state = value;
       }
     }
-    // Auto-heal stale checkpoint pauses from earlier versions:
-    if (state.state === "paused" && (state.reason.includes("checkpoint prefix changed") || state.reason.includes("checkpoint validation failed"))) {
-      state = { version: 1, state: "ready", reason: "stale checkpoint cache invalidated on restore", at: Date.now() };
+    // Auto-heal false-positive, reduction, and checkpoint pauses on restore:
+    if (state.state === "paused" && !state.reason.startsWith("managed child hard allowance")) {
+      state = { version: 1, state: "ready", reason: `auto-healed from: ${state.reason}`, at: Date.now() };
     }
     if (state.state === "compacting") {
       publish({ ...state, state: "paused", reason: "interrupted mechanical compaction",
@@ -152,8 +150,8 @@ export function registerSpendGuard(api: ExtensionAPI) {
       return context;
     }
     if (state.state !== "ready" && !retryRequested) {
-      if (state.reason.includes("checkpoint prefix changed") || state.reason.includes("checkpoint validation failed")) {
-        state = { version: 1, state: "ready", reason: "stale checkpoint cache invalidated", at: Date.now() };
+      if (!state.reason.startsWith("managed child hard allowance")) {
+        state = { version: 1, state: "ready", reason: `auto-healed from: ${state.reason}`, at: Date.now() };
       } else {
         throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome, state.recovery)}`);
       }
@@ -217,7 +215,9 @@ export function registerSpendGuard(api: ExtensionAPI) {
       const reduced = compactRequest(context, state.checkpoint);
       const after = estimate(reduced.context);
       if (after >= limit || after > estimated * 0.9) {
-        if (pace) return admitUnreduced("mechanical reduction could not shrink this request further.");
+        if (pace || before < model.contextWindow * 0.8) {
+          return admitUnreduced("mechanical reduction could not shrink this request further.");
+        }
         const stalled = explainStalledReduction({ reduced: reduced.context, estimated, after, limit });
         state = { ...state, after }; // record what the reduction actually reached
         pause(stalled.reason, undefined, stalled.recovery);
@@ -228,7 +228,9 @@ export function registerSpendGuard(api: ExtensionAPI) {
     } catch (error) {
       if (state.state === "paused") throw error;
       const failure = error instanceof Error ? error.message : "mechanical reduction failed";
-      if (pace) return admitUnreduced(`${failure}.`);
+      if (pace || before < model.contextWindow * 0.8) {
+        return admitUnreduced(`${failure}.`);
+      }
       pause(failure, undefined, failure === IRREDUCIBLE
         ? "Nothing older than the newest tool batch is left to fold away."
           + " Start a fresh session with /new, or rewind with /tree."
