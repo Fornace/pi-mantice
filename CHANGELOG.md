@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.2 (2026-09-14)
+
+- Images no longer count at base64 wire size. A session that attached
+  screenshots (4.3MB of base64 across three images) estimated over one
+  million request tokens and hit the spend guard pause five times over the
+  200K limit, stopping work on spend that never happens: providers bill the
+  decoded raster, not the base64 encoding. The estimator now walks content
+  blocks the way pi itself does, counting each image at a fixed 4800 chars
+  (1200 tokens) and each thinking or tool-call block at text weight, with
+  system prompt and tool schemas estimated separately.
+
 ## 1.4.1 (2026-09-14)
 
 - Spend-pace triggers no longer pause the session when reduction cannot

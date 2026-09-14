@@ -12,7 +12,9 @@ event and persistence contracts at matching revisions.
 
 - Before either Mantice transport runs, an oversized request is mechanically
   projected below the lesser of 200K tokens and half the advertised context
-  window. High cumulative or five-minute token throughput triggers the same
+  window. Images count at pi's fixed raster estimate (1200 tokens each), not
+  their base64 wire size, because providers bill the decoded raster. High cumulative or five-minute
+  token throughput triggers the same
   reduction as a saving, never as a gate: a request that already fits the
   context limit runs unreduced when reduction cannot shrink it, so spend
   thresholds cannot stop work. Provider failures remain the router's concern

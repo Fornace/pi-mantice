@@ -13,20 +13,39 @@ export interface GuardCheckpoint {
 export const hash = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-// What a provider actually receives: message content, system prompt, tool
-// schemas, images. A tool result's `details` is local render state that stays in
-// the session file and is never serialized into a request, so counting it paused
-// sessions over bytes nobody was ever billed for.
-const transmitted = (context: Context): unknown => ({
-  ...context,
-  messages: context.messages.map((message) => message.role === "toolResult"
-    && message.details !== undefined ? { ...message, details: undefined } : message),
-});
+// Pi's own estimator counts each image as a fixed 4800 chars (1200 tokens):
+// providers charge the decoded raster, not the base64 wire encoding, so
+// serializing raw content multiplies every image by 4/3 of its byte size and
+// pauses sessions on spend that never happens. A tool result's `details` is
+// local render state that never enters a request. Reported provider usage is
+// also considered by the guard. This is deliberately not a billing meter.
+const ESTIMATED_IMAGE_CHARS = 4800;
 
-// Request estimate, including schemas/system and images. Reported provider usage
-// is also considered by the guard. This is deliberately not a billing meter.
+function contentChars(content: string | readonly unknown[]): number {
+  if (typeof content === "string") return content.length;
+  let chars = 0;
+  for (const block of content as { type: string; text?: string; thinking?: string; name?: string; arguments?: unknown }[]) {
+    if (block?.type === "text" && block.text) chars += block.text.length;
+    else if (block?.type === "image") chars += ESTIMATED_IMAGE_CHARS;
+    else if (block?.type === "thinking" && block.thinking) chars += block.thinking.length;
+    else if (block?.type === "toolCall") chars += (block.name?.length ?? 0) + JSON.stringify(block.arguments ?? {}).length;
+  }
+  return chars;
+}
+
+export function estimateMessage(message: Message): number {
+  return Math.ceil(contentChars((message as { content?: string | readonly unknown[] }).content ?? "") / 4);
+}
+
 export function estimate(context: Context): number {
-  return Math.ceil(Buffer.byteLength(JSON.stringify(transmitted(context)), "utf8") / 4);
+  let chars = context.systemPrompt?.length ?? 0;
+  for (const tool of context.tools ?? []) {
+    chars += tool.name.length + tool.description.length + JSON.stringify(tool.parameters ?? {}).length;
+  }
+  for (const message of context.messages) {
+    chars += contentChars((message as { content?: string | readonly unknown[] }).content ?? "");
+  }
+  return Math.ceil(chars / 4);
 }
 
 const count = (value: number): string => value.toLocaleString("en-US");

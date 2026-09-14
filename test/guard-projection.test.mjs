@@ -69,3 +69,21 @@ test('a request that is one indivisible tool batch says so instead of "insuffici
   const context = { messages: [call(1, 'c1', 'read'), result(2, 'c1', 'read', 'x'.repeat(200_000))] };
   assert.throws(() => compactRequest(context), new RegExp(IRREDUCIBLE));
 });
+
+test('images count at pi\'s fixed raster estimate, not base64 wire size', () => {
+  // Pi itself charges 4800 chars (1200 tokens) per image: providers bill the
+  // decoded raster, not the base64 encoding. A session with three screenshots
+  // attached is ~4.3MB of base64; the old byte-based estimate crossed the
+  // 200K pause limit five times over and paused work on spend that never happened.
+  const image = { type: 'image', data: 'A'.repeat(1_400_000), mimeType: 'image/png' };
+  const context = {
+    messages: [
+      text('user', 1, 'check these screenshots'),
+      { role: 'user', timestamp: 2, content: [image, image, image, { type: 'text', text: 'and fix them' }] },
+    ],
+  };
+  const tokens = estimate(context);
+  assert.ok(tokens < 5_000, `${tokens} tokens for 3 images plus a sentence`);
+  assert.ok(tokens >= 3_600, `${tokens} tokens lost the images entirely`);
+  assert.ok(tokens < 200_000, 'image wire size must not trip the context threshold');
+});
