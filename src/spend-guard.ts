@@ -176,13 +176,19 @@ export function registerSpendGuard(api: ExtensionAPI) {
     const estimated = estimate(projected);
     const before = Math.max(estimated, lastUsage);
     const limit = Math.min(GUARD_LIMITS.contextTokens, model.contextWindow * GUARD_LIMITS.contextFraction);
-    const reason = forced ? "repair retry"
-      : before >= limit ? "context soft threshold"
-      : before >= GUARD_LIMITS.spendContextFloor && cumulative >= GUARD_LIMITS.cumulativeTokens ? "cumulative token soft threshold"
-      : before >= GUARD_LIMITS.spendContextFloor && recent >= GUARD_LIMITS.rateTokens ? "token rate soft threshold"
+    // A repair retry re-evaluates the thresholds from scratch. The retry exists
+    // to rebuild after a repair (a /tree rewind, a fixed estimator); a request
+    // that now fits every limit has nothing left to reduce, and demanding a
+    // verified reduction anyway dead-ends the retry on the newest tool batch.
+    const reason = before >= limit ? forced ? "repair retry: context soft threshold" : "context soft threshold"
+      : before >= GUARD_LIMITS.spendContextFloor && cumulative >= GUARD_LIMITS.cumulativeTokens ? forced ? "repair retry: cumulative token soft threshold" : "cumulative token soft threshold"
+      : before >= GUARD_LIMITS.spendContextFloor && recent >= GUARD_LIMITS.rateTokens ? forced ? "repair retry: token rate soft threshold" : "token rate soft threshold"
       : undefined;
-    if (!reason) return projected;
-    const pace = reason === "cumulative token soft threshold" || reason === "token rate soft threshold";
+    if (!reason) {
+      if (forced) publish({ version: 1, state: "ready", reason: "repair retry: the request fits every threshold", at: now, before });
+      return projected;
+    }
+    const pace = reason.endsWith("cumulative token soft threshold") || reason.endsWith("token rate soft threshold");
     // A pace trigger fired moments ago and already admitted its request
     // unreduced: nothing new can be reduced in the same window.
     if (pace && now - paceAdmittedAt < GUARD_LIMITS.rateWindowMs) return projected;
