@@ -38,6 +38,10 @@ small request are not evidence that reducing conversation history will help.
 Context uses the larger of serialized request bytes/4 (system prompt and tool
 schemas included) and the latest provider-reported input/cache usage since the
 checkpoint. This is a heuristic, not a tokenizer or USD billing calculation.
+A tool result's `details` is excluded: providers transmit `content` only, while
+`details` is local render state that Pi persists in the session file. Counting it
+paused sessions over bytes nobody was ever billed for; one 537KB generated image
+in `details` added about 179,000 tokens to every later request in its session.
 No fixed wall-time or low turn-count cutoff is imposed on useful work.
 
 The request projection retains about 20K recent tokens, moving the cut backward
@@ -61,9 +65,22 @@ reduction and automatic mechanical-compaction failure persist a pause. The
 wrapper refuses later requests, including queued continuations, without paid
 transport. No overflow-shaped error or AI fallback is used for the brake.
 
+A pause names the specific cause and carries the way out. An insufficient
+reduction reports the measured before/after against the limit and then whichever
+of three things actually blocked it: one retained message too large to fold away
+(named by tool and clock time), the system prompt and tool schemas alone
+exceeding the limit, or a diffuse tail with no dominant message. Each returns the
+command that can clear it, and says so when `/mantice-guard retry` cannot: the
+reduction never drops the newest tool batch, so a pause on a message inside it
+needs `/tree` or `/new`. Summarizer pauses say that `/compact` stays blocked
+while paused because summarizing is itself a paid request.
+
 Custom entry: `mantice-spend-guard`.
 Event bus: `mantice:spend-guard`.
-Data: `{version:1,state:"ready"|"compacting"|"paused",reason,outcome?,at,before?,after?,checkpoint?}`.
+Data: `{version:1,state:"ready"|"compacting"|"paused",reason,recovery?,outcome?,at,before?,after?,checkpoint?}`.
+`recovery` is the human instruction recorded with the pause, so every later
+request in the session repeats the same specific way out. `after` on a paused
+record is the size the stalled reduction actually reached.
 A valid managed-child tranche exhaustion adds `outcome:"budget_yield"`. The
 subagent runtime preserves the session and partial output, releases capacity,
 and wakes a still-active parent goal once. It does not block sibling admission.

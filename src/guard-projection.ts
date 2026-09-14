@@ -13,10 +13,75 @@ export interface GuardCheckpoint {
 export const hash = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
+// What a provider actually receives: message content, system prompt, tool
+// schemas, images. A tool result's `details` is local render state that stays in
+// the session file and is never serialized into a request, so counting it paused
+// sessions over bytes nobody was ever billed for.
+const transmitted = (context: Context): unknown => ({
+  ...context,
+  messages: context.messages.map((message) => message.role === "toolResult"
+    && message.details !== undefined ? { ...message, details: undefined } : message),
+});
+
 // Request estimate, including schemas/system and images. Reported provider usage
 // is also considered by the guard. This is deliberately not a billing meter.
 export function estimate(context: Context): number {
-  return Math.ceil(Buffer.byteLength(JSON.stringify(context), "utf8") / 4);
+  return Math.ceil(Buffer.byteLength(JSON.stringify(transmitted(context)), "utf8") / 4);
+}
+
+const count = (value: number): string => value.toLocaleString("en-US");
+
+const describe = (message: Message): string => {
+  const at = new Date(message.timestamp).toLocaleTimeString(undefined, { hour12: false });
+  return message.role === "toolResult"
+    ? `the ${at} ${message.toolName} tool result`
+    : `the ${at} ${message.role} message`;
+};
+
+function heaviest(messages: Message[]): { label: string; tokens: number } | undefined {
+  let top: { label: string; tokens: number } | undefined;
+  for (const message of messages) {
+    const tokens = estimate({ messages: [message] });
+    if (!top || tokens > top.tokens) top = { label: describe(message), tokens };
+  }
+  return top;
+}
+
+// A stalled reduction has several distinct causes and each one has a different
+// way out. Name the one that actually blocked this request: a pause the operator
+// cannot act on is a dead end, not a brake.
+export function explainStalledReduction(args: {
+  reduced: Context; estimated: number; after: number; limit: number;
+}): { reason: string; recovery: string } {
+  const { reduced, estimated, after, limit } = args;
+  const overhead = estimate({ ...reduced, messages: [] });
+  const freed = Math.round((1 - after / estimated) * 100);
+  const headline = after >= limit
+    ? `mechanical reduction reached ${count(after)} tokens, still over the ${count(limit)} limit`
+    : freed > 0
+    ? `mechanical reduction freed only ${freed}% of ${count(estimated)} tokens`
+    : `mechanical reduction did not shrink the request below ${count(after)} tokens`;
+  const top = heaviest(reduced.messages);
+  if (top && top.tokens >= after / 2) {
+    return {
+      reason: `${headline}; ${top.label} is ${count(top.tokens)} tokens of it`,
+      recovery: "Rewind past that message with /tree, or start a fresh session with /new."
+        + " /mantice-guard retry keeps it: reduction never drops the newest tool batch.",
+    };
+  }
+  if (overhead >= after / 2) {
+    return {
+      reason: `${headline}; the system prompt and ${reduced.tools?.length ?? 0} tool schemas`
+        + ` are ${count(overhead)} tokens of it, before any history`,
+      recovery: "Load fewer tools or extensions, or start a fresh session with /new."
+        + " Reduction cannot touch either, so /mantice-guard retry will stall here again.",
+    };
+  }
+  return {
+    reason: `${headline}; ${reduced.messages.length} retained messages hold`
+      + ` ${count(Math.max(after - overhead, 0))} tokens with no single dominant one`,
+    recovery: "Rewind to before the heavy turns with /tree, or start a fresh session with /new.",
+  };
 }
 
 export function applyCheckpoint(messages: Message[], checkpoint?: GuardCheckpoint): Message[] {
@@ -52,6 +117,10 @@ export function assertPairs(messages: Message[]): void {
   if (pending.size) throw new Error("unfinished retained tool batch");
 }
 
+// Everything in the request belongs to the newest tool batch, which reduction
+// must keep whole, so there is nothing older left to fold into a digest.
+export const IRREDUCIBLE = "the request is already one indivisible tool batch";
+
 export function compactRequest(context: Context, previous?: GuardCheckpoint): {
   context: Context; checkpoint: GuardCheckpoint;
 } {
@@ -64,7 +133,7 @@ export function compactRequest(context: Context, previous?: GuardCheckpoint): {
     tokens += estimate({ messages: [messages[--cut]] });
   }
   while (cut > 0 && messages[cut]?.role === "toolResult") cut--;
-  if (cut === 0) throw new Error("no reducible history before retained tail");
+  if (cut === 0) throw new Error(IRREDUCIBLE);
   const tail = messages.slice(cut);
   assertPairs(tail);
   const prefix = messages.slice(0, cut);

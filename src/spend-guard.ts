@@ -2,7 +2,8 @@ import type { Context, Model, Api, ProviderStreams, AssistantMessageEvent } from
 import { lazyStream } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { childAllowance } from "./child-allowance.ts";
-import { applyCheckpoint, compactRequest, estimate, type GuardCheckpoint } from "./guard-projection.ts";
+import { applyCheckpoint, compactRequest, estimate, explainStalledReduction, IRREDUCIBLE,
+  type GuardCheckpoint } from "./guard-projection.ts";
 
 export const GUARD_ENTRY = "mantice-spend-guard";
 export const GUARD_EVENT = "mantice:spend-guard";
@@ -15,6 +16,9 @@ interface GuardState {
   version: 1;
   state: "ready" | "compacting" | "paused";
   reason: string;
+  // What this particular pause needs from a human. Durable, because every later
+  // request in the session re-throws the pause and must repeat the same way out.
+  recovery?: string;
   outcome?: "budget_yield";
   at: number;
   checkpoint?: GuardCheckpoint;
@@ -37,17 +41,19 @@ export function registerSpendGuard(api: ExtensionAPI) {
       sessionId: ctx?.sessionManager.getSessionId() });
     if (next.state !== "ready") console.error(`[pi-mantice] guard ${next.state}: ${next.reason}`);
   }
-  function recoveryInstruction(reason: string, outcome?: GuardState["outcome"]) {
-    return outcome === "budget_yield"
+  function recoveryInstruction(reason: string, outcome?: GuardState["outcome"], recovery?: string) {
+    return recovery
+      ?? (outcome === "budget_yield"
       ? "Worker yielded its resumable session to the parent."
       : reason.startsWith("managed child hard allowance")
       ? "Human recovery requires /mantice-child-budget <total> in an idle interactive session."
-      : "Repair then /mantice-guard retry.";
+      : "Run /mantice-guard retry: it rebuilds the request from full original history.");
   }
-  function pause(reason: string, outcome?: GuardState["outcome"]): never {
-    publish({ ...state, state: "paused", reason, at: Date.now(), ...(outcome ? { outcome } : {}) });
+  function pause(reason: string, outcome?: GuardState["outcome"], recovery?: string): never {
+    publish({ ...state, state: "paused", reason, at: Date.now(),
+      ...(outcome ? { outcome } : {}), ...(recovery ? { recovery } : {}) });
     // Avoid overflow/retry keywords: this error is terminal, never AI recovery.
-    throw new Error(`Mantice spend guard paused: ${reason}. ${recoveryInstruction(reason, outcome)}`);
+    throw new Error(`Mantice spend guard paused: ${reason}. ${recoveryInstruction(reason, outcome, recovery)}`);
   }
   const allowance = childAllowance(api, () => ctx, pause);
   function restore(context: ExtensionContext) {
@@ -58,13 +64,17 @@ export function registerSpendGuard(api: ExtensionAPI) {
       if (entry.type === "custom" && entry.customType === GUARD_ENTRY) {
         const value = entry.data as GuardState;
         if (value?.version !== 1 || !["ready", "compacting", "paused"].includes(value.state) ||
-          (value.outcome !== undefined && value.outcome !== "budget_yield")) {
+          (value.outcome !== undefined && value.outcome !== "budget_yield") ||
+          (value.recovery !== undefined && typeof value.recovery !== "string")) {
           pause("invalid durable guard record");
         }
         state = value;
       }
     }
-    if (state.state === "compacting") publish({ ...state, state: "paused", reason: "interrupted mechanical compaction" });
+    if (state.state === "compacting") {
+      publish({ ...state, state: "paused", reason: "interrupted mechanical compaction",
+        recovery: "Run /mantice-guard retry: the reduction was cut off mid-run, nothing was sent." });
+    }
   }
   api.on("session_start", (_event, context) => restore(context));
   api.on("session_tree", (_event, context) => restore(context));
@@ -118,15 +128,21 @@ export function registerSpendGuard(api: ExtensionAPI) {
     if (!ctx) throw new Error("Mantice spend guard has no session context");
     const childState = allowance.snapshot();
     if (childState?.blocked) pause("managed child hard allowance paused", childState.outcome);
-    if (nativeMechanical) pause("automatic summarizer attempted a model call");
+    if (nativeMechanical) {
+      pause("automatic summarizer attempted a model call", undefined,
+        "Summarizing costs a paid request, so it stays blocked while the guard is paused."
+        + " Shrink the session with /tree or /new instead of /compact.");
+    }
     if (summarizing && state.state === "ready") {
       if (estimate(context) >= Math.min(GUARD_LIMITS.contextTokens, model.contextWindow * 0.5)) {
-        pause("manual summary requires mechanical reduction first");
+        pause("manual summary requires mechanical reduction first", undefined,
+          "Send your next message instead: the guard reduces this request mechanically,"
+          + " for free, before any paid call. /compact after that.");
       }
       return context;
     }
     if (state.state !== "ready" && !retryRequested) {
-      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome)}`);
+      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome, state.recovery)}`);
     }
     const forced = retryRequested;
     retryRequested = false;
@@ -165,14 +181,20 @@ export function registerSpendGuard(api: ExtensionAPI) {
       const reduced = compactRequest(context, state.checkpoint);
       const after = estimate(reduced.context);
       if (after >= limit || after > estimated * 0.9) {
-        pause("mechanical reduction made insufficient progress");
+        const stalled = explainStalledReduction({ reduced: reduced.context, estimated, after, limit });
+        state = { ...state, after }; // record what the reduction actually reached
+        pause(stalled.reason, undefined, stalled.recovery);
       }
       publish({ version: 1, state: "ready", reason: "mechanical reduction verified", at: Date.now(),
         checkpoint: reduced.checkpoint, before, after });
       return reduced.context;
     } catch (error) {
       if (state.state === "paused") throw error;
-      pause(error instanceof Error ? error.message : "mechanical reduction failed");
+      const failure = error instanceof Error ? error.message : "mechanical reduction failed";
+      pause(failure, undefined, failure === IRREDUCIBLE
+        ? "Nothing older than the newest tool batch is left to fold away."
+          + " Start a fresh session with /new, or rewind with /tree."
+        : undefined);
     }
   }
 
