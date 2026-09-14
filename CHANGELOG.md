@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.4 (2026-09-14)
+
+- Checkpoint prefix mismatch no longer pauses the session. A checkpoint is a
+  caching optimization for projected request history; if message metadata or
+  branch history differs between turns (e.g. Pi populates `usage`, reorders
+  keys, or deserializes from disk), the cached checkpoint is simply invalid.
+  The guard now silently discards the stale checkpoint and re-evaluates the
+  full context, creating a fresh checkpoint only if context limits require it.
+  Sessions paused under prior versions with `checkpoint prefix changed`
+  automatically clear to `ready` on restore or request admission without
+  requiring `/mantice-guard retry`.
+
 ## 1.4.3 (2026-09-14)
 
 - A repair retry now re-evaluates the spend thresholds from scratch instead
