@@ -1,6 +1,6 @@
 {
   "name": "pi-mantice",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Integrated Mantice runtime for Pi: routed models, mechanical request reduction, accountable goals, managed subagents, and an event-driven activity sidebar",
   "type": "module",
   "license": "MIT",

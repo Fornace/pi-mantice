@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.0 (2026-09-14)
+
+- A tool result's `details` no longer counts against the request estimate.
+  Providers transmit `content` only; `details` is local render state that Pi
+  persists in the session file. A 537KB image left there by an image tool added
+  716,624 base64 characters — about 179,000 tokens — to every later request in
+  that session, and paused a live session at 232,770 estimated tokens while the
+  provider was billing 48,999. Replaying that session's messages: 347,604 tokens
+  before this change, 131,083 after.
+- `mechanical reduction made insufficient progress` is gone. A stalled reduction
+  now reports what it measured (before, after, limit) and which of three things
+  blocked it: one retained message too large to fold away, named by tool and
+  clock time; the system prompt and tool schemas alone over the limit; or a
+  diffuse tail with no dominant message.
+- Every pause carries its own recovery instruction and persists it, so the
+  repeat error on each later request says the same specific thing. Pauses that
+  `/mantice-guard retry` cannot clear now say so and name `/tree` or `/new`
+  instead — reduction never drops the newest tool batch, so retrying a pause on
+  a message inside it stalls identically.
+- `no reducible history before retained tail` now reads `the request is already
+  one indivisible tool batch`, with the matching recovery.
+- A paused record stores the size the stalled reduction actually reached instead
+  of carrying forward the previous `after`.
+
 ## 1.3.0 (2026-09-13)
 
 - Keep provider failures in Mantice routing instead of treating six errors as
