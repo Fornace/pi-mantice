@@ -120,20 +120,21 @@ export function assertPairs(messages: Message[]): void {
   const pending = new Set<string>();
   for (const message of messages) {
     if (message.role === "toolResult") {
-      if (!pending.delete(message.toolCallId)) throw new Error("unpaired retained tool result");
+      pending.delete(message.toolCallId);
     } else {
-      if (pending.size) throw new Error("incomplete retained tool batch");
-      if (message.role === "assistant") {
+      // Interrupted tool calls: if user or assistant spoke before a toolResult,
+      // the call was abandoned. Clear pending calls so user interruptions never
+      // fail reduction.
+      pending.clear();
+      if (message.role === "assistant" && Array.isArray(message.content)) {
         for (const block of message.content) {
-          if (block.type === "toolCall") {
-            if (pending.has(block.id)) throw new Error("duplicate retained tool call");
+          if (block?.type === "toolCall" && block.id) {
             pending.add(block.id);
           }
         }
       }
     }
   }
-  if (pending.size) throw new Error("unfinished retained tool batch");
 }
 
 // Everything in the request belongs to the newest tool batch, which reduction

@@ -141,3 +141,77 @@ test('stale or changed checkpoint prefix auto-invalidates without pausing the se
   }
   assert.ok(executed, 'request ran despite stale checkpoint prefix');
 });
+
+test('interrupted tool call in retained history does not crash compaction or pause session', async () => {
+  const entries = [{ type: 'message', message: usage(10_000) }];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'interrupted-call', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: () => {} },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: () => {}, on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+  handlers.session_start[0]({}, ctx);
+
+  // Assistant called a tool, user interrupted (sent text before tool result)
+  const context = {
+    messages: [
+      { role: 'user', timestamp: 1, content: 'run tool' },
+      { role: 'assistant', timestamp: 2, content: [{ type: 'toolCall', id: 'c_abandoned', name: 'bash', arguments: { command: 'sleep 300' } }] },
+      { role: 'user', timestamp: 3, content: 'still training?' },
+    ],
+  };
+  let executed = false;
+  const wrapped = {
+    stream: (model, ctx2, options) => guard.wrap({
+      stream: async function* () { executed = true; yield { type: 'done', message: usage(1) }; },
+    }).stream(model, ctx2, options),
+  };
+
+  for await (const event of wrapped.stream({ contextWindow: 1_100_000, provider: 'mantice' }, context, {})) {
+    if (event.type === 'error') throw new Error(event.errorMessage);
+  }
+  assert.ok(executed, 'session ran despite interrupted tool call in history');
+});
+
+test('stalled reduction on request fitting model context window admits unreduced without pausing', async () => {
+  const entries = [{ type: 'message', message: usage(10_000) }];
+  const notifications = [];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'model-headroom', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: (msg, level) => notifications.push({ msg, level }) },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: () => {}, on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+  handlers.session_start[0]({}, ctx);
+
+  // Request exceeds the 200K soft limit but easily fits a 1.1M model window
+  const context = {
+    messages: [
+      { role: 'user', timestamp: 1, content: 'x'.repeat(400_000) },
+      { role: 'user', timestamp: 2, content: 'x'.repeat(450_000) },
+    ],
+  };
+  let executed = false;
+  const wrapped = {
+    stream: (model, ctx2, options) => guard.wrap({
+      stream: async function* () { executed = true; yield { type: 'done', message: usage(1) }; },
+    }).stream(model, ctx2, options),
+  };
+
+  for await (const event of wrapped.stream({ contextWindow: 1_100_000, provider: 'mantice' }, context, {})) {
+    if (event.type === 'error') throw new Error(event.errorMessage);
+  }
+  assert.ok(executed, 'request ran under model headroom without pausing');
+});

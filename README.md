@@ -13,12 +13,11 @@ event and persistence contracts at matching revisions.
 - Before either Mantice transport runs, an oversized request is mechanically
   projected below the lesser of 200K tokens and half the advertised context
   window. Images count at pi's fixed raster estimate (1200 tokens each), not
-  their base64 wire size, because providers bill the decoded raster. High cumulative or five-minute
-  token throughput triggers the same
-  reduction as a saving, never as a gate: a request that already fits the
-  context limit runs unreduced when reduction cannot shrink it, so spend
-  thresholds cannot stop work. Provider failures remain the router's concern
-  and do not cause irrelevant request compaction.
+  their base64 wire size, because providers bill the decoded raster. When mechanical
+  reduction cannot shrink a request, the guard admits it unreduced as long as
+  it fits within the model's actual context window, so reduction limits never stop
+  work. Provider failures remain the router's concern and do not cause irrelevant
+  request compaction.
 - Active goal budgets include parent and child input plus output. Child usage
   receipts are durable, deduplicated and reconciled after restart.
 - Managed subagents share FIFO capacity, retain session files, release capacity
