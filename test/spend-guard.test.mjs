@@ -92,3 +92,52 @@ test('armed repair retry still compacts a request that exceeds the context limit
   assert.ok(projectedMessages < context.messages.length,
     `reduction kept all ${projectedMessages} messages`);
 });
+
+test('stale or changed checkpoint prefix auto-invalidates without pausing the session', async () => {
+  const entries = [{ type: 'message', message: usage(10_000) }];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'prefix-change', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: () => {} },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: () => {}, on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+
+  // Set an existing checkpoint with a mismatched prefixHash
+  const staleCheckpoint = {
+    count: 2,
+    prefixHash: 'mismatched-hash',
+    summary: 'old digest',
+    summaryHash: 'also-mismatched',
+    at: Date.now() - 60_000,
+  };
+  const branchWithCp = [
+    { type: 'custom', customType: 'mantice-spend-guard', data: { version: 1, state: 'ready', reason: 'previous', at: 1, checkpoint: staleCheckpoint } },
+  ];
+  const ctxWithCp = { ...ctx, sessionManager: { ...ctx.sessionManager, getBranch: () => branchWithCp } };
+  handlers.session_start[0]({}, ctxWithCp);
+
+  const context = {
+    messages: [
+      { role: 'user', timestamp: 1, content: 'hello' },
+      { role: 'assistant', timestamp: 2, content: [{ type: 'text', text: 'hi' }] },
+      { role: 'user', timestamp: 3, content: 'continue' },
+    ],
+  };
+  let executed = false;
+  const wrapped = {
+    stream: (model, ctx2, options) => guard.wrap({
+      stream: async function* () { executed = true; yield { type: 'done', message: usage(1) }; },
+    }).stream(model, ctx2, options),
+  };
+
+  for await (const event of wrapped.stream({ contextWindow: 200_000, provider: 'mantice' }, context, {})) {
+    if (event.type === 'error') throw new Error(event.errorMessage);
+  }
+  assert.ok(executed, 'request ran despite stale checkpoint prefix');
+});

@@ -77,6 +77,10 @@ export function registerSpendGuard(api: ExtensionAPI) {
         state = value;
       }
     }
+    // Auto-heal stale checkpoint pauses from earlier versions:
+    if (state.state === "paused" && (state.reason.includes("checkpoint prefix changed") || state.reason.includes("checkpoint validation failed"))) {
+      state = { version: 1, state: "ready", reason: "stale checkpoint cache invalidated on restore", at: Date.now() };
+    }
     if (state.state === "compacting") {
       publish({ ...state, state: "paused", reason: "interrupted mechanical compaction",
         recovery: "Run /mantice-guard retry: the reduction was cut off mid-run, nothing was sent." });
@@ -148,15 +152,21 @@ export function registerSpendGuard(api: ExtensionAPI) {
       return context;
     }
     if (state.state !== "ready" && !retryRequested) {
-      throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome, state.recovery)}`);
+      if (state.reason.includes("checkpoint prefix changed") || state.reason.includes("checkpoint validation failed")) {
+        state = { version: 1, state: "ready", reason: "stale checkpoint cache invalidated", at: Date.now() };
+      } else {
+        throw new Error(`Mantice spend guard paused: ${state.reason}. ${recoveryInstruction(state.reason, state.outcome, state.recovery)}`);
+      }
     }
     const forced = retryRequested;
     retryRequested = false;
     let projected: Context;
-    try { projected = { ...context, messages: applyCheckpoint(context.messages, state.checkpoint) }; }
-    catch (error) {
-      if (!forced) pause(error instanceof Error ? error.message : "checkpoint validation failed");
-      // Explicit repair retry rebuilds from complete original request history.
+    try {
+      projected = { ...context, messages: applyCheckpoint(context.messages, state.checkpoint) };
+    } catch {
+      // Checkpoint is stale or invalidated by history edits/deserialization:
+      // discard it and project from original history. A cache mismatch must never
+      // pause the session or stop work.
       state = { ...state, checkpoint: undefined };
       projected = context;
     }
