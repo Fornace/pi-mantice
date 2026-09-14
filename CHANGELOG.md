@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.3 (2026-09-14)
+
+- A repair retry now re-evaluates the spend thresholds from scratch instead
+  of demanding a verified reduction unconditionally. When the repaired
+  request fits every threshold (for example after the 1.4.2 estimator fix
+  removed a false positive), the retry admits it and clears the pause.
+  Forcing a reduction anyway dead-ended the retry on the newest tool batch
+  and re-paused a session with nothing left to repair. Threshold-triggered
+  retries still compact as before.
+
 ## 1.4.2 (2026-09-14)
 
 - Images no longer count at base64 wire size. A session that attached
