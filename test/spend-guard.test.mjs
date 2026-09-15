@@ -215,3 +215,101 @@ test('stalled reduction on request fitting model context window admits unreduced
   }
   assert.ok(executed, 'request ran under model headroom without pausing');
 });
+
+test('high cacheRead usage does not trigger token rate compaction', async () => {
+  const recentTime = Date.now() - 60_000;
+  // 30 messages with 80k cacheRead each = 2.4M cacheRead tokens, but only 100 input tokens each
+  const entries = Array.from({ length: 30 }, () => ({
+    type: 'message',
+    message: {
+      role: 'assistant',
+      timestamp: recentTime,
+      content: [{ type: 'text', text: 'ok' }],
+      usage: { input: 100, output: 50, cacheRead: 80_000, cacheWrite: 0 },
+      stopReason: 'stop',
+    },
+  }));
+  const emitted = [];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'cache-read-rate', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: () => {} },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: (event, data) => emitted.push({ event, data }), on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+  handlers.session_start[0]({}, ctx);
+
+  const context = {
+    messages: [
+      { role: 'user', timestamp: 1, content: 'hello' },
+      { role: 'assistant', timestamp: 2, content: [{ type: 'text', text: 'hi' }] },
+      { role: 'user', timestamp: 3, content: 'next' },
+    ],
+  };
+  let executed = false;
+  const wrapped = {
+    stream: (model, ctx2, options) => guard.wrap({
+      stream: async function* () { executed = true; yield { type: 'done', message: usage(1) }; },
+    }).stream(model, ctx2, options),
+  };
+
+  for await (const event of wrapped.stream({ contextWindow: 200_000, provider: 'mantice' }, context, {})) {
+    if (event.type === 'error') throw new Error(event.errorMessage);
+  }
+  assert.ok(executed, 'request ran');
+  assert.ok(!emitted.some(e => e.data?.state === 'compacting'), 'guard must not trigger compaction on cache reads');
+});
+
+test('high uncached throughput usage does trigger token rate compaction', async () => {
+  const recentTime = Date.now() - 60_000;
+  // 25 messages with 90k uncached input each = 2.25M uncached tokens in 1 minute
+  const entries = Array.from({ length: 25 }, () => ({
+    type: 'message',
+    message: {
+      role: 'assistant',
+      timestamp: recentTime,
+      content: [{ type: 'text', text: 'ok' }],
+      usage: { input: 90_000, output: 1_000, cacheRead: 0, cacheWrite: 0 },
+      stopReason: 'stop',
+    },
+  }));
+  const emitted = [];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'uncached-rate', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: () => {} },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: (event, data) => emitted.push({ event, data }), on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+  handlers.session_start[0]({}, ctx);
+
+  const context = {
+    messages: [
+      { role: 'user', timestamp: 1, content: 'a'.repeat(200_000) },
+      { role: 'user', timestamp: 2, content: 'b'.repeat(200_000) },
+    ],
+  };
+  let executed = false;
+  const wrapped = {
+    stream: (model, ctx2, options) => guard.wrap({
+      stream: async function* () { executed = true; yield { type: 'done', message: usage(1) }; },
+    }).stream(model, ctx2, options),
+  };
+
+  for await (const event of wrapped.stream({ contextWindow: 1_000_000, provider: 'mantice' }, context, {})) {
+    if (event.type === 'error') throw new Error(event.errorMessage);
+  }
+  assert.ok(executed, 'request ran');
+  assert.ok(emitted.some(e => e.data?.reason?.includes('token rate soft threshold')),
+    'guard must trigger rate compaction on high uncached throughput');
+});

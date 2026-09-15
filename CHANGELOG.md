@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.6 (2026-09-14)
+
+- Spend guard no longer counts `cacheRead` towards spend-pace (`recent`) and
+  cumulative token thresholds. Sessions with hot prompt caches (e.g. 80k-120k
+  cached tokens on Gemini/Anthropic) were previously accumulating millions of
+  apparent tokens within minutes, triggering `token rate soft threshold`
+  compaction and blowing away provider prompt caches. Compaction now only fires
+  on high un-cached throughput (`input + output + cacheWrite`) or when total
+  context length legitimately exceeds soft limits (`context soft threshold`).
+
 ## 1.4.5 (2026-09-14)
 
 - Work never stops on mechanical reduction failures or stalled reductions when
