@@ -141,6 +141,55 @@ export function assertPairs(messages: Message[]): void {
 // must keep whole, so there is nothing older left to fold into a digest.
 export const IRREDUCIBLE = "the request is already one indivisible tool batch";
 
+// A single unbounded tool result must never pause a session: one 900K-token
+// header dump is irreducible only because reduction keeps the newest batch
+// whole. Truncate any individual tool result past this cap in the projected
+// REQUEST only. The session file keeps the full original, the toolCall pairing
+// stays intact, and the placeholder names the size and the recovery path.
+export const OVERSIZE_TOOL_RESULT_TOKENS = 40_000;
+const OVERSIZE_HEAD_CHARS = 8_000;
+const OVERSIZE_TAIL_CHARS = 2_000;
+
+function toolResultText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((block) => block?.type === "text" && typeof block.text === "string")
+    .map((block) => block.text as string)
+    .join("\n");
+}
+
+export function truncateOversizedToolResults(messages: Message[]): {
+  messages: Message[]; truncated: string[];
+} {
+  const truncated: string[] = [];
+  const out = messages.map((message) => {
+    if (message.role !== "toolResult") return message;
+    const tokens = estimate({ messages: [message] });
+    if (tokens < OVERSIZE_TOOL_RESULT_TOKENS) return message;
+    const text = toolResultText((message as { content?: unknown }).content);
+    const at = new Date(message.timestamp).toLocaleTimeString(undefined, { hour12: false });
+    const label = `${at} ${message.toolName} tool result`;
+    truncated.push(`${label} (${count(tokens)} tokens)`);
+    const note = `[mantice-guard: truncated ${label} from ${count(tokens)} tokens;`
+      + ` kept first ${OVERSIZE_HEAD_CHARS} and last ${OVERSIZE_TAIL_CHARS} chars.]
+`
+      + `[Recover the full output from the session file or re-run with a narrow offset/limit window.]
+`;
+    return {
+      ...message,
+      content: [{
+        type: "text",
+        text: note + text.slice(0, OVERSIZE_HEAD_CHARS)
+          + `\n[... ${count(tokens)} tokens elided ...]\n`
+          + text.slice(-OVERSIZE_TAIL_CHARS),
+      }],
+      details: undefined,
+    } as Message;
+  });
+  return { messages: out, truncated };
+}
+
 export function compactRequest(context: Context, previous?: GuardCheckpoint): {
   context: Context; checkpoint: GuardCheckpoint;
 } {
@@ -167,5 +216,7 @@ export function compactRequest(context: Context, previous?: GuardCheckpoint): {
     count, prefixHash: hash(context.messages.slice(0, count)),
     summary: digest.summary, summaryHash: hash(digest.summary), at: Date.now(),
   };
-  return { context: { ...context, messages: applyCheckpoint(context.messages, checkpoint) }, checkpoint };
+  const projected = applyCheckpoint(context.messages, checkpoint);
+  const { messages: truncated } = truncateOversizedToolResults(projected);
+  return { context: { ...context, messages: truncated }, checkpoint };
 }

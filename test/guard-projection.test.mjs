@@ -87,3 +87,47 @@ test('images count at pi\'s fixed raster estimate, not base64 wire size', () => 
   assert.ok(tokens >= 3_600, `${tokens} tokens lost the images entirely`);
   assert.ok(tokens < 200_000, 'image wire size must not trip the context threshold');
 });
+
+test('an oversized tool result in the newest batch is truncated, never a pause (2026-09-15 incident)', () => {
+  // Session 01a09589 hit a 929,590-token fast_read of an SDK header: the result
+  // WAS the newest tool batch, reduction could not fold it, and the guard
+  // paused mid-goal. The projected request must truncate instead; the session
+  // file keeps the original.
+  const huge = 'h'.repeat(800_000) + 'TAILMARKER';
+  const context = {
+    systemPrompt: 'short',
+    messages: [
+      text('user', 1, 'older turns worth folding ' + 'o'.repeat(200_000)),
+      text('assistant', 2, 'fold me ' + 'p'.repeat(200_000)),
+      text('user', 3, 'read the MPP header'),
+      call(4, 'c1', 'fast_read'),
+      result(5, 'c1', 'fast_read', huge),
+    ],
+  };
+  const { context: reduced } = compactRequest(context);
+  const after = estimate(reduced);
+  const kept = reduced.messages.at(-1);
+  assert.equal(kept.role, 'toolResult');
+  assert.equal(kept.toolCallId, 'c1'); // pairing intact
+  assert.ok(after < 100_000, `reduced request is ${after} tokens, expected under 100K`);
+  const body = kept.content.map((b) => b.text).join('\n');
+  assert.match(body, /truncated/);
+  assert.match(body, /200,003 tokens/);
+  assert.match(body, /TAILMARKER/); // tail window preserved
+  assert.match(body, /offset\/limit/); // recovery hint present
+});
+
+test('tool results under the oversize cap pass through untouched', () => {
+  const context = {
+    messages: [
+      text('user', 1, 'older ' + 'o'.repeat(200_000)),
+      text('assistant', 2, 'fold ' + 'p'.repeat(200_000)),
+      text('user', 3, 'q'),
+      call(4, 'c1', 'bash'),
+      result(5, 'c1', 'bash', 'small output'),
+    ],
+  };
+  const { context: reduced } = compactRequest(context);
+  const kept = reduced.messages.at(-1);
+  assert.equal(kept.content[0].text, 'small output');
+});
