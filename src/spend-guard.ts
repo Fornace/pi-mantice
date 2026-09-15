@@ -176,9 +176,13 @@ export function registerSpendGuard(api: ExtensionAPI) {
       const message = entry.message;
       if (message.timestamp <= (state.checkpoint?.at ?? 0)) continue;
       const usage = message.usage;
-      const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
-      cumulative += tokens;
-      if (message.timestamp >= now - GUARD_LIMITS.rateWindowMs) recent += tokens;
+      // Spend-pace limits guard against runaway generation/ingestion.
+      // Cache reads must not count toward spend rate, otherwise an active
+      // session with a hot prompt cache hits the rate ceiling and forces a
+      // compaction that busts the upstream cache and spikes billing.
+      const throughputTokens = usage.input + usage.output + usage.cacheWrite;
+      cumulative += throughputTokens;
+      if (message.timestamp >= now - GUARD_LIMITS.rateWindowMs) recent += throughputTokens;
       lastUsage = usage.input + usage.cacheRead + usage.cacheWrite;
     }
     const estimated = estimate(projected);
