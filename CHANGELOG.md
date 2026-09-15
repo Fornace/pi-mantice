@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.7 (2026-09-15)
+
+- Spend guard truncates oversized tool results in the projected request instead
+  of pausing the session. A single unbounded tool result (a 929,590-token
+  `fast_read` of an SDK header) previously made the request irreducible —
+  reduction keeps the newest tool batch whole — and the guard paused mid-goal.
+  `truncateOversizedToolResults` caps any individual tool result at 40K tokens
+  in the projected request only (first 8K + last 2K chars, toolCall pairing
+  intact, placeholder names the original size and the recovery path). The
+  session file keeps the full original.
+
 ## 1.4.6 (2026-09-14)
 
 - Spend guard no longer counts `cacheRead` towards spend-pace (`recent`) and
