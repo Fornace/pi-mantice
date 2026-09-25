@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0 (2026-09-25)
+
+- Bundles pi-message-sidebar 2.2.0 (vendored from e1c37f6): the FILES list can
+  no longer squeeze MESSAGES below three visible slots (a 127-file edit list
+  took ~25 rows and left one message); FILES is capped at six rows idle,
+  twelve while browsing, with `… N more` truncation rows; focusing the rail
+  and pressing `f` enters hierarchical files navigation (`↑↓` move, `↵`/`c`
+  copy the path, `Esc` returns to messages); and the session identity leads
+  with the stable cmux role id bound to this surface's UUID in the cmux-role
+  registry (fallback: the dynamic `surface:N` ref), read from the durable
+  `CMUX_SURFACE_ID` env without a subprocess.
+
 ## 1.4.7 (2026-09-15)
 
 - Spend guard truncates oversized tool results in the projected request instead
