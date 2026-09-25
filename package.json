@@ -57,7 +57,7 @@
     "pi-frontier": "^1.2.0",
     "pi-codex-goal": "file:vendor/pi-codex-goal-17df02e.tgz",
     "pi-message-sidebar": "file:vendor/pi-message-sidebar-eadb644.tgz",
-    "pi-subagent-extension": "file:vendor/pi-subagent-extension-b55b6c5.tgz"
+    "pi-subagent-extension": "file:vendor/pi-subagent-extension-1016b93.tgz"
   },
   "bundledDependencies": [
     "pi-codex-goal",

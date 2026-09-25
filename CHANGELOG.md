@@ -2,7 +2,7 @@
 
 ## 1.5.0 (2026-09-26)
 
-- Re-vendor pi-subagent-extension from b55b6c5: the packaged
+- Re-vendor pi-subagent-extension from 1016b93: the packaged
   `fornace-model-routing` skill is dropped (1.2.0). The user-level skill at
   `~/.pi/agent/skills/` (distributed by pi-setup) owns the routing contract;
   the bundled copy collided with it at every startup and had drifted stale.
