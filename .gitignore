@@ -2,3 +2,4 @@ node_modules/
 graphify-out/
 *.tsbuildinfo
 .DS_Store
+*.tgz
