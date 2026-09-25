@@ -35,8 +35,9 @@ try {
     'package/node_modules/pi-message-sidebar/index.ts',
     'package/node_modules/pi-subagent-extension/index.ts',
     'package/node_modules/pi-subagent-extension/usage-receipts.ts',
-    'package/node_modules/pi-subagent-extension/skills/fornace-model-routing/SKILL.md',
   ]) assert.ok(entryLines.includes(required), `Packed artifact missing ${required}`);
+  assert.ok(!entryLines.some(entry => entry.startsWith('package/node_modules/pi-subagent-extension/skills/')),
+    'Packed artifact must not bundle the fornace-model-routing skill (user-level skill owns it)');
   const integrity = 'sha512-' + createHash('sha512').update(await readFile(tarball)).digest('base64');
   execFileSync('tar', ['-xzf', tarball, '-C', root]);
   const cwd = join(root, 'package');
@@ -53,7 +54,7 @@ try {
   assert.equal(response?.success, true, 'Extracted package did not answer the Pi RPC load probe');
   const commands = new Set(response.data.commands.map(command => command.name));
   for (const command of ['goal', 'create-goal', 'agents', 'subagent-guard', 'sidebar',
-    'mantice-guard', 'mantice-child-budget', 'mantice-setup', 'skill:fornace-model-routing']) {
+    'mantice-guard', 'mantice-child-budget', 'mantice-setup']) {
     assert.ok(commands.has(command), `Extracted package did not load ${command}`);
   }
   for (const script of ['verify-session-wire.mjs', 'verify-fast-wire.mjs']) {

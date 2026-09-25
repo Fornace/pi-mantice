@@ -1,7 +1,12 @@
 # Changelog
 
-## 1.5.0 (2026-09-25)
+## 1.5.0 (2026-09-26)
 
+- Re-vendor pi-subagent-extension from b55b6c5: the packaged
+  `fornace-model-routing` skill is dropped (1.2.0). The user-level skill at
+  `~/.pi/agent/skills/` (distributed by pi-setup) owns the routing contract;
+  the bundled copy collided with it at every startup and had drifted stale.
+  `pi.skills` no longer points into `node_modules/pi-subagent-extension`.
 - Bundles pi-message-sidebar 2.2.0 (vendored from e1c37f6): the FILES list can
   no longer squeeze MESSAGES below three visible slots (a 127-file edit list
   took ~25 rows and left one message); FILES is capped at six rows idle,

@@ -37,9 +37,6 @@
       "./node_modules/pi-subagent-extension/index.ts",
       "./node_modules/pi-message-sidebar/index.ts"
     ],
-    "skills": [
-      "./node_modules/pi-subagent-extension/skills"
-    ],
     "prompts": [
       "./node_modules/pi-codex-goal/prompts"
     ]
@@ -60,7 +57,7 @@
     "pi-frontier": "^1.2.0",
     "pi-codex-goal": "file:vendor/pi-codex-goal-17df02e.tgz",
     "pi-message-sidebar": "file:vendor/pi-message-sidebar-eadb644.tgz",
-    "pi-subagent-extension": "file:vendor/pi-subagent-extension-2a1d95f.tgz"
+    "pi-subagent-extension": "file:vendor/pi-subagent-extension-b55b6c5.tgz"
   },
   "bundledDependencies": [
     "pi-codex-goal",
