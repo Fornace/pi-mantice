@@ -38,7 +38,7 @@ import { registerRtk } from "../src/rtk.ts";
 import { registerRtkTools } from "../src/rtk-tools.ts";
 import { registerSessionIdentity } from "../src/session-identity.ts";
 import { pruneSummaryToolResults } from "../src/summary-pruning.ts";
-import { registerSpendGuard } from "../src/spend-guard.ts";
+import { limitToolResults, registerGuardRetirement } from "../src/request-limits.ts";
 import { supportsCompactionRecovery } from "../src/admission-recovery.ts";
 
 const COMPAT = {
@@ -105,7 +105,7 @@ function providerModels(rows: CatalogRow[], provider: ProviderId) {
 
 export default async function register(api: ExtensionAPI) {
   registerSessionIdentity(api);
-  const guard = registerSpendGuard(api);
+  registerGuardRetirement(api);
   let admissionContext: ExtensionContext | undefined;
   api.on("session_start", (_event, ctx) => { admissionContext = ctx; });
   api.on("session_shutdown", () => { admissionContext = undefined; });
@@ -152,8 +152,8 @@ export default async function register(api: ExtensionAPI) {
       models: runtimeModels(rows),
       fetchModels: async () => runtimeModels(await resolveCatalog()),
       api: {
-        "openai-completions": guard.wrap(completions),
-        "openai-responses": guard.wrap(RESPONSES_API),
+        "openai-completions": limitToolResults(completions),
+        "openai-responses": limitToolResults(RESPONSES_API),
       },
     }));
   }
@@ -198,9 +198,12 @@ export default async function register(api: ExtensionAPI) {
     const pruned = pruneSummaryToolResults(preparation.messagesToSummarize, history);
     const prunedPrefix = pruneSummaryToolResults(preparation.turnPrefixMessages ?? [], history);
 
-    // /fast session: replace the span with the mechanical digest directly.
-    // Zero model calls; the digest is deterministic and byte-bounded.
-    if (mechanicalGate.consume(ctx.sessionManager.getSessionId()) || guard.needsMechanical()) {
+    // /fast session, and every automatic compaction on a Mantice model: replace
+    // the span with the mechanical digest directly. Zero model calls; the digest
+    // is deterministic and byte-bounded. Manual /compact stays Pi native.
+    const automatic = event.reason !== "manual"
+      && (PROVIDERS as readonly string[]).includes(ctx.model?.provider ?? "");
+    if (mechanicalGate.consume(ctx.sessionManager.getSessionId()) || automatic) {
       const fileLists = fileListsOf(preparation.fileOps);
       const digest = buildMechanicalDigest({
         messages: pruned.messages,

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.6.0 (2026-09-26)
+
+- Retire the spend guard. It rewrote requests behind Pi's back (a digest plus a
+  20K tail from half the context window, so models silently lost their working
+  context and the prompt cache), paused sessions with errors only a human could
+  clear, blocked manual `/compact` on large sessions, and published pauses its
+  own auto-heal never cleared, which kept goals and subagent dispatch blocked.
+  Removed with it: the managed-child lifetime allowance (8M cache-inclusive
+  tokens, hard stop). Requests now carry the full history Pi built; context
+  limits are Pi's compaction, which stays mechanical when automatic.
+- Kept: a cap on any single tool result over 160K characters, applied per
+  request, so one unbounded output cannot wedge a session.
+- Compatibility: sessions whose last guard record is not `ready` get one
+  closing `ready` record, so pi-codex-goal, pi-subagent-extension and
+  pi-message-sidebar stop honoring a pause nobody can clear. `/mantice-guard`
+  and `/mantice-child-budget` remain as no-ops because the subagent preflight
+  requires them in every child.
+- CI now builds and tests against Pi 0.87.1, the release users run; the 1.5.0
+  regression passed CI because it tested 0.85.1.
+
 ## 1.5.1 (2026-09-26)
 
 - Spend guard keeps the system prompt and tool declarations when it reduces a

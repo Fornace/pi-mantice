@@ -10,20 +10,15 @@ event and persistence contracts at matching revisions.
 
 ## What it does
 
-- Before either Mantice transport runs, an oversized request is mechanically
-  projected below the lesser of 200K tokens and half the advertised context
-  window. Images count at pi's fixed raster estimate (1200 tokens each), not
-  their base64 wire size, because providers bill the decoded raster. When mechanical
-  reduction cannot shrink a request, the guard admits it unreduced as long as
-  it fits within the model's actual context window, so reduction limits never stop
-  work. Provider failures remain the router's concern and do not cause irrelevant
-  request compaction.
+- Requests reach Mantice with the full history Pi built. The only change is a
+  cap on any single tool result over 160K characters (first 8K and last 2K kept,
+  in the request only), so one unbounded output cannot wedge a session. Nothing
+  is reduced behind Pi's back and nothing pauses: context limits are Pi's
+  compaction, which runs mechanically (zero model calls) when automatic.
 - Active goal budgets include parent and child input plus output. Child usage
   receipts are durable, deduplicated and reconciled after restart.
-- Managed subagents share FIFO capacity, retain session files, release capacity
-  while idle, and yield their partial result when a worker token tranche is
-  reached. A background yield wakes the still-active parent once. One worker's
-  budget yield does not block unrelated assignments.
+- Managed subagents share FIFO capacity, retain session files and release
+  capacity while idle.
 - The sidebar consumes goal and worker events without polling. It distinguishes
   active, queued, failed, paused and yielded workers. Message summaries have
   bounded durable attempts and honor `Retry-After` before automatic recovery.
@@ -154,13 +149,12 @@ npm run audit     # spawn a real Pi and compare its registry to the live catalog
 - `src/rtk.ts`, `src/rtk-tools.ts` RTK command rewriting and fast tools
 - `src/overflow.ts` canonical overflow mapping + response-model notices
 - `src/frontier.ts` pi-frontier join used by setup and annotations
-- `src/spend-guard.ts`, `src/guard-projection.ts` pre-request reduction and
-  managed-child allowance enforcement
+- `src/request-limits.ts` oversized tool-result cap and retired-guard compatibility
 - `node_modules/pi-codex-goal` accountable autonomous goal runtime
 - `node_modules/pi-subagent-extension` managed delegation and usage receipts
 - `node_modules/pi-message-sidebar` goal and worker activity surface
 - `vendor/PROVENANCE.md` exact bundled component commits and SHA256 values
-- `extensions/mantice-models.ts` Mantice provider and guard wiring
+- `extensions/mantice-models.ts` Mantice provider wiring
 - `docs/PLAN.md` architecture plan, incidents, and rollout gates
 
 ## Publishing

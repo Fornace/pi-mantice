@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import {
   lazyStream,
-  type Api, type AssistantMessageEvent, type Context, type Model, type SimpleStreamOptions,
+  type Api, type AssistantMessageEvent, type Model, type SimpleStreamOptions, type TranscriptContext,
 } from "@earendil-works/pi-ai";
 import { admissionDelay, admissionMessage, admissionResponse } from "./admission-evidence.ts";
 
@@ -26,7 +26,7 @@ export function supportsCompactionRecovery(version: string): boolean {
 type StreamSimple = typeof import("@earendil-works/pi-ai/api/openai-completions").streamSimple;
 
 export function admissionStream(
-  model: Model<Api>, context: Context, options: SimpleStreamOptions | undefined,
+  model: Model<Api>, context: TranscriptContext, options: SimpleStreamOptions | undefined,
   recovery: AdmissionRecovery,
   streamSimple: StreamSimple,
 ) {
