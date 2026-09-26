@@ -313,3 +313,48 @@ test('high uncached throughput usage does trigger token rate compaction', async 
   assert.ok(emitted.some(e => e.data?.reason?.includes('token rate soft threshold')),
     'guard must trigger rate compaction on high uncached throughput');
 });
+
+test('reduction keeps the pi >= 0.86 system message that carries the prompt and tools', async () => {
+  const entries = [{ type: 'message', message: usage(10_000) }];
+  const handlers = {};
+  const ctx = {
+    sessionManager: { getSessionId: () => 'system-kept', getBranch: () => entries, getEntries: () => entries },
+    ui: { notify: () => {} },
+  };
+  const api = {
+    appendEntry: () => {},
+    events: { emit: () => {}, on: () => {} },
+    on: (name, handler) => { (handlers[name] ??= []).push(handler); },
+    registerCommand: () => {},
+  };
+  const guard = registerSpendGuard(api);
+  handlers.session_start[0]({}, ctx);
+  const system = {
+    role: 'system', timestamp: 0, content: 'You are a coding agent.',
+    toolsAdded: [{ name: 'bash', description: 'Run a command', parameters: { type: 'object' } }],
+  };
+  const context = {
+    messages: [
+      system,
+      { role: 'user', timestamp: 1, content: 'a'.repeat(300_000) },
+      { role: 'user', timestamp: 2, content: 'b'.repeat(300_000) },
+      { role: 'user', timestamp: 3, content: 'c'.repeat(300_000) },
+      { role: 'user', timestamp: 4, content: 'go' },
+    ],
+  };
+  const sent = [];
+  const streams = { stream: async function* (m, c) { sent.push(c.messages); yield { type: 'done', message: usage(1) }; } };
+  const run = async (request) => {
+    for await (const event of guard.wrap(streams).stream({ contextWindow: 200_000, provider: 'mantice' }, request, {})) {
+      if (event.type === 'error') throw new Error(event.errorMessage);
+    }
+  };
+  await run(context);
+  // The next request replays the stored checkpoint instead of reducing again.
+  await run({ messages: [...context.messages, { role: 'user', timestamp: 5, content: 'next' }] });
+  for (const messages of sent) {
+    assert.ok(messages.length < 6, `reduction kept all ${messages.length} messages`);
+    assert.equal(messages[0], system, 'the system message must lead the reduced request');
+    assert.equal(messages.filter((m) => m.role === 'system').length, 1);
+  }
+});

@@ -2,8 +2,8 @@ import type { Context, Model, Api, ProviderStreams, AssistantMessageEvent } from
 import { lazyStream } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { childAllowance } from "./child-allowance.ts";
-import { applyCheckpoint, compactRequest, estimate, explainStalledReduction, IRREDUCIBLE,
-  type GuardCheckpoint } from "./guard-projection.ts";
+import { applyCheckpoint, compactRequest, conversationView, estimate, explainStalledReduction, IRREDUCIBLE,
+  restoreSystem, type GuardCheckpoint } from "./guard-projection.ts";
 
 export const GUARD_ENTRY = "mantice-spend-guard";
 export const GUARD_EVENT = "mantice:spend-guard";
@@ -133,6 +133,11 @@ export function registerSpendGuard(api: ExtensionAPI) {
   });
 
   function prepare(model: Model<Api>, context: Context): Context {
+    const { view, system } = conversationView(context);
+    return restoreSystem(context, view, prepareConversation(model, view), system);
+  }
+
+  function prepareConversation(model: Model<Api>, context: Context): Context {
     if (!ctx) throw new Error("Mantice spend guard has no session context");
     const childState = allowance.snapshot();
     if (childState?.blocked) pause("managed child hard allowance paused", childState.outcome);

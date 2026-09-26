@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.1 (2026-09-26)
+
+- Spend guard keeps the system prompt and tool declarations when it reduces a
+  request. Pi 0.86 moved both into the transcript's leading `system` message;
+  the guard's digest replaced `messages[0..cut]` wholesale, so from the first
+  reduction onward every request in the session went out with no instructions
+  and no tools (GPT answered that it had no tools, GLM ran away). The guard now
+  folds conversation only and restores the system messages, in order, ahead of
+  the digest. Checkpoints written by 1.5.0 under Pi >= 0.86 no longer match the
+  conversation prefix and are discarded, so affected sessions heal on the next
+  request after a restart. The estimate also counts tools declared in system
+  messages.
+
 ## 1.5.0 (2026-09-26)
 
 - Re-vendor pi-subagent-extension from 1016b93: the packaged

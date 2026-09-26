@@ -37,15 +37,62 @@ export function estimateMessage(message: Message): number {
   return Math.ceil(contentChars((message as { content?: string | readonly unknown[] }).content ?? "") / 4);
 }
 
+type Tools = NonNullable<Context["tools"]>;
+
+// Pi >= 0.86 system message: the prompt and tool declarations live in the transcript.
+interface SystemEntry {
+  role: "system";
+  content?: string | readonly unknown[];
+  sections?: Record<string, string | null>;
+  toolsAdded?: Tools;
+}
+
+const isSystem = (message: { role: string }): boolean => message.role === "system";
+
+const toolChars = (tools: Tools): number => tools.reduce((chars, tool) =>
+  chars + tool.name.length + tool.description.length + JSON.stringify(tool.parameters ?? {}).length, 0);
+
 export function estimate(context: Context): number {
-  let chars = context.systemPrompt?.length ?? 0;
-  for (const tool of context.tools ?? []) {
-    chars += tool.name.length + tool.description.length + JSON.stringify(tool.parameters ?? {}).length;
-  }
+  let chars = (context.systemPrompt?.length ?? 0) + toolChars(context.tools ?? []);
   for (const message of context.messages) {
     chars += contentChars((message as { content?: string | readonly unknown[] }).content ?? "");
+    if (isSystem(message)) {
+      const system = message as unknown as SystemEntry;
+      chars += toolChars(system.toolsAdded ?? [])
+        + Object.values(system.sections ?? {}).reduce((sum, section) => sum + (section?.length ?? 0), 0);
+    }
   }
   return Math.ceil(chars / 4);
+}
+
+// Pi >= 0.86 moved the system prompt and every tool declaration into the
+// transcript's system messages. The guard folds conversation only: a digest
+// that swallowed them sent requests with no instructions and no tools. The
+// guard works on the pre-0.86 view (prompt and tools beside the history) and
+// the system messages go back, in order, ahead of what it returns. Mantice
+// transports collapse system messages into one leading message regardless.
+export function conversationView(context: Context): { view: Context; system: Message[] } {
+  const system = context.messages.filter(isSystem);
+  if (!system.length) return { view: context, system };
+  let systemPrompt = context.systemPrompt ?? "";
+  const tools: Tools = [...(context.tools ?? [])];
+  for (const message of system as unknown as SystemEntry[]) {
+    const content = message.content ?? "";
+    systemPrompt += typeof content === "string" ? content
+      : (content as { type: string; text?: string }[]).map((block) => block?.text ?? "").join("");
+    systemPrompt += Object.values(message.sections ?? {}).join("");
+    tools.push(...(message.toolsAdded ?? []));
+  }
+  return {
+    view: { ...context, systemPrompt, tools, messages: context.messages.filter((m) => !isSystem(m)) },
+    system,
+  };
+}
+
+export function restoreSystem(original: Context, view: Context, projected: Context, system: Message[]): Context {
+  if (!system.length) return projected;
+  if (projected.messages === view.messages) return original;
+  return { ...original, messages: [...system, ...projected.messages] };
 }
 
 const count = (value: number): string => value.toLocaleString("en-US");
