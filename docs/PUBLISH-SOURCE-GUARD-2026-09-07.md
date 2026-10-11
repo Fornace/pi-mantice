@@ -75,3 +75,20 @@ history returned[]; initial outdated single trust.js path also returned[].
 Goal remains active; publication awaits authenticated settings verification,
 not another blind failed release attempt. Five historical policy panes remain
 a separate unresolved gateway issue.
+
+## Source verification completed
+
+Pi f1bbbfc28c82a18aafd1ce4a21ee8d43d1f9c343 is on GitHubmain;
+CI34083857323 succeeded, including typecheck, existing checks and real
+session-wire/compaction-wire. The actual guard CLI refused clean committed
+source before it matched remote main, then accepted the clean matching source
+after push using controlled tag-event environment inputs. No tag was created
+and no npm publish invoked by those probes. This verifies guard behavior,
+not account authorization or the real Publish workflow's OIDC handshake.
+
+Runtime extension source is unchanged by this release-only commit; selected
+locald3c7f40 remains the verified admission runtime. npm remains1.0.0.
+Latest04:30 fleet heartbeat still5policy errors/0changes; direct04:35 surface84
+recheck retained its successful corrected ACK, not a gateway error.
+Publication needs an authenticated npm session and inspection of existing
+trust/actions. Do not silently grant direct publish over staged approval.
